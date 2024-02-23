@@ -10,3 +10,5 @@ scikit-learn
 scikit-image
 gputil
 psutil
+pyglet<=1.4.10
+ruamel.yaml<0.18.0

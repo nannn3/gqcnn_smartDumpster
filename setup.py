@@ -139,7 +139,7 @@ class InstallCmd(install, object):
 requirements = [
     "autolab-core", "autolab-perception", "visualization", "numpy", "scipy",
     "matplotlib", "opencv-python", "scikit-learn", "scikit-image", "psutil",
-    "gputil"
+    "gputil","pyglet<=1.4.10","ruamel.yaml<0.18.0","protobuf<=3.20.0"
 ]
 
 exec(
