@@ -1,0 +1,2 @@
+[ WARN:0@0.005] global cap_v4l.cpp:997 open VIDEOIO(V4L2:/dev/video0): can't open camera by index
+[ WARN:0@0.005] global cap.cpp:342 open VIDEOIO(V4L2): backend is generally available but can't be used to capture by index
