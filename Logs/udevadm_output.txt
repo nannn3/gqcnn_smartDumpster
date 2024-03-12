@@ -1,0 +1,35 @@
+This program is for debugging only, it does not run any program
+specified by a RUN key. It may show incorrect results, because
+some values may be different, or not available at a simulation run.
+
+DEVPATH=/devices/pci0000:00/0000:00:14.0/usb1/1-8
+DEVNAME=/dev/bus/usb/001/004
+DEVTYPE=usb_device
+DRIVER=usb
+PRODUCT=2bc5/401/1
+TYPE=0/0/0
+BUSNUM=001
+DEVNUM=004
+MAJOR=189
+MINOR=3
+ACTION=add
+SUBSYSTEM=usb
+TAGS=:seat:
+ID_VENDOR=Orbbec_R_
+ID_VENDOR_ENC=Orbbec\x28R\x29
+ID_VENDOR_ID=2bc5
+ID_MODEL=ORBBEC_Depth_Sensor
+ID_MODEL_ENC=ORBBEC\x20Depth\x20Sensor
+ID_MODEL_ID=0401
+ID_REVISION=0001
+ID_SERIAL=Orbbec_R__ORBBEC_Depth_Sensor
+ID_BUS=usb
+ID_USB_INTERFACES=:ff0000:010100:010200:
+ID_VENDOR_FROM_DATABASE=Orbbec 3D Technology International, Inc
+ID_MODEL_FROM_DATABASE=Astra
+DEVLINKS=/dev/astra
+ID_PATH=pci-0000:00:14.0-usb-0:8
+ID_PATH_TAG=pci-0000_00_14_0-usb-0_8
+CURRENT_TAGS=:seat:
+ID_FOR_SEAT=usb-pci-0000_00_14_0-usb-0_8
+USEC_INITIALIZED=2137097
