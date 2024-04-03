@@ -58,4 +58,21 @@ class Astra(CameraSensor):
         self._device.set_depth_color_sync_enabled(True)
         self._depth_stream.start()
         self._color_stream.start()
+    
+    def stop(self):
+        '''Stops the sensor stream'''
+        self._color_stream.stop()
+        self._depth_stream.stop()
+    def frames(self):
+        '''
+        Returns the color and depth frames as a list
+        '''
+        color_frame = self._color_stream.read_frame()
+        depth_frame = self._depth_stream.read_frame()
+        color_frame_data = color_frame.get_buffer_as_uint8()
+        depth_frame_data = depth_frame.get_buffer_as_uint16()
+        color_array = np.ndarray((color_frame.height, color_frame.width,3),dtype = np.uint8,buffer=color_frame_data)
+        color_array = cv.cvtColor(color_array, cv.COLOR_BGR2RGB)
+        depth_array = np.ndarray((depth_frame.height, depth_frame.width),dtype = np.uint16, buffer = depth_frame_data)
+        return [color_array,depth_array]
 
