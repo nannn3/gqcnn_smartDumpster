@@ -1,3 +1,10 @@
+import cv2 as cv
+import numpy as np
+from openni import openni2
+from openni import _openni2 as c_api
+from perception import CameraSensor
+from autolab_core import CameraIntrinsics
+
 class Astra(CameraSensor):
     '''
     Class for interacting with the Orbbecc Astra RGB+D camera
