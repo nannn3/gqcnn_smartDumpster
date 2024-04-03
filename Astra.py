@@ -20,8 +20,6 @@ class Astra(CameraSensor):
 
     def __init__(self,
             frame="Astra",
-            depth_format=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_DEPTH_1_MM,
-            color_format=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_RGB888,
             mirror_depth=True,
             mirror_color=True):
         '''
@@ -34,8 +32,6 @@ class Astra(CameraSensor):
             mirror_depth (bool): Whether to mirror the depth stream.
             mirror_color (bool): Whether to mirror the color stream.
         '''
-        self._depth_format = depth_format
-        self._color_format = color_format
         self._mirror_depth = mirror_depth
         self._mirror_color = mirror_color
         self._device = None
@@ -62,11 +58,11 @@ class Astra(CameraSensor):
         self._depth_stream.set_mirroring_enabled(self._mirror_depth)
         
         # Configure video modes for color and depth streams
-        self._color_stream.set_video_mode(pixelFormat=self._color_format,
+        self._color_stream.set_video_mode(c_api.OniVideoMode(pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_RGB888,
                 resolutionX=Astra.COLOR_IM_WIDTH,
                 resolutionY=Astra.COLOR_IM_HEIGHT,
-                fps=Astra.FPS)
-        self._depth_stream.set_video_mode(pixelFormat=self._depth_format,
+                fps=Astra.FPS))
+        self._depth_stream.set_video_mode(c_api.OniVideoMode(pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_DEPTH_1_MM,
                 resolutionX=Astra.DEPTH_IM_WIDTH,
                 resolutionY=Astra.DEPTH_IM_HEIGHT,
                 fps = Astra.FPS)
