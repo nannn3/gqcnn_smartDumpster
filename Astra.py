@@ -34,6 +34,7 @@ class Astra(CameraSensor):
         '''
         self._mirror_depth = mirror_depth
         self._mirror_color = mirror_color
+        self._frame = frame
         self._device = None
         self._color_stream = None
         self._depth_stream = None
@@ -58,14 +59,16 @@ class Astra(CameraSensor):
         self._depth_stream.set_mirroring_enabled(self._mirror_depth)
         
         # Configure video modes for color and depth streams
-        self._color_stream.set_video_mode(c_api.OniVideoMode(pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_RGB888,
-                resolutionX=Astra.COLOR_IM_WIDTH,
-                resolutionY=Astra.COLOR_IM_HEIGHT,
-                fps=Astra.FPS))
-        self._depth_stream.set_video_mode(c_api.OniVideoMode(pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_DEPTH_1_MM,
-                resolutionX=Astra.DEPTH_IM_WIDTH,
-                resolutionY=Astra.DEPTH_IM_HEIGHT,
-                fps = Astra.FPS)
+        color_mode = c_api.OniVideoMode(pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_RGB888,
+                                                   resolutionX=Astra.COLOR_IM_WIDTH,
+                                                   resolutionY=Astra.COLOR_IM_HEIGHT,
+                                                   fps=Astra.fps)
+        self._color_stream.set_video_mode(color_mode)
+        depth_mode = c_api.OniVideoMode(pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_DEPTH_1_MM,
+                                                   resolutionX=Astra.DEPTH_IM_WIDTH,
+                                                   resolutionY=Astra.DEPTH_IM_HEIGHT,
+                                                   fps=Astra.fps)
+        self._depth_stream.set_video_mode(depth_mode)
         
         # Set image registration and depth-color sync
         self._device.set_image_registration_mode(True)
