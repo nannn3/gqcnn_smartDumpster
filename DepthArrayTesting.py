@@ -13,7 +13,14 @@ from gqcnn.grasping import (
 from gqcnn.utils import GripperMode
 from Astra import Astra
 
-def load_configuration():
+# Note that this test script is meant to be run in /SmartDumpsterDexnet/
+# if it is changed, these paths will need to be changed too
+CAMERA_INST_FILENAME = "data/calib/primesense/primesense.intr"
+camera_intr_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), CAMERA_INST_FILENAME)
+
+MODEL_YAML_FILENAME = "cfg/examples/fc_gqcnn_pj.yaml"
+
+def load_detection_config():
     """Load configuration parameters for object detection.
 
     Returns:
@@ -70,7 +77,7 @@ def load_configuration_file():
     Returns:
         YamlConfig: YAML configuration object.
     """
-    config_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cfg/examples/fc_gqcnn_pj.yaml")
+    config_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), MODEL_YAML_FILENAME)
     return YamlConfig(config_filename)
 
 def capture_frames(device):
@@ -194,10 +201,9 @@ if __name__ == "__main__":
     device.start()
     
     # Load configs
-    det_cfg = load_configuration()
+    det_cfg = load_detection_config()
     gripper_mode = load_model_configuration()
     config = load_configuration_file()
-    camera_intr_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data/calib/primesense/primesense.intr")
     camera_intr = CameraIntrinsics.load(camera_intr_filename)
 
     # Get color and depth images 
@@ -208,7 +214,9 @@ if __name__ == "__main__":
     objects = detect_objects(det, color_im, depth_im, det_cfg)
     # Save the images
     save_images(objects)
+    '''
     # Inpaint
+   
     depth_im = inpaint_depth_image(depth_im, config["inpaint_rescale_factor"])
 
     segmask = None  # You may need to set segmask here
@@ -223,3 +231,5 @@ if __name__ == "__main__":
     action = query_policy(policy, state)
 
     visualize_grasp(rgbd_im, action, config["policy"])
+    '''
+    device.stop()
