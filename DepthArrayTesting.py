@@ -1,3 +1,5 @@
+import pdb
+import numpy as np
 import cv2 as cv
 import time
 import json
@@ -20,17 +22,17 @@ camera_intr_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
 
 MODEL_YAML_FILENAME = "cfg/examples/fc_gqcnn_pj.yaml"
 
-def load_detection_config():
+def load_detection_config(foreground_mask_tolerance=1,min_contour_area=50,max_contour_area=np.inf,filter_dim=1):
     """Load configuration parameters for object detection.
 
     Returns:
         dict: Dictionary containing detection configuration parameters.
     """
     det_cfg = {
-        "foreground_mask_tolerance": 1,
-        "min_contour_area": 50,
-        "max_contour_area": 100000,
-        "filter_dim": 1
+        "foreground_mask_tolerance": foreground_mask_tolerance,
+        "min_contour_area": min_contour_area,
+        "max_contour_area": max_contour_area,
+        "filter_dim": filter_dim
     }
     return det_cfg
 
@@ -109,15 +111,23 @@ def detect_objects(detector, color_im, depth_im, det_cfg):
     """
     return detector.detect(color_im, depth_im, det_cfg)
 
-def save_images(objects):
+def save_images(objects,directory,det_cfg=None):
     """Save segmented images and color thumbnails.
 
     Args:
         objects (list): List of detected objects.
+        directory (str): Name of folder to save files to. 
     """
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    if det_cfg is not None:
+        with open(os.path.join(directory,"det_cfg.json"),'w') as f:
+            json.dump(det_cfg,f)
+
     for indx, obj in enumerate(objects):
-        obj.binary_im.save(f'{indx}_seg_img.png')
-        obj.color_thumbnail.save(f'{indx}_color_thumb.png')
+        obj.binary_im.save(os.path.join(directory,f'{indx}_seg_img.png'))
+        obj.color_thumbnail.save(os.path.join(directory,f'{indx}_color_thumb.png'))
 
 def inpaint_depth_image(depth_im, inpaint_rescale_factor):
     """Inpaint depth image.
@@ -201,7 +211,7 @@ if __name__ == "__main__":
     device.start()
     
     # Load configs
-    det_cfg = load_detection_config()
+    # det_cfg = load_detection_config()
     gripper_mode = load_model_configuration()
     config = load_configuration_file()
     camera_intr = CameraIntrinsics.load(camera_intr_filename)
@@ -211,9 +221,17 @@ if __name__ == "__main__":
     
     # Generate list of all objects detected in the frame
     det = detector.RgbdForegroundMaskDetector()
-    objects = detect_objects(det, color_im, depth_im, det_cfg)
-    # Save the images
-    save_images(objects)
+    for i in range(100):
+        try:
+            det_cfg = load_detection_config(foreground_mask_tolerance=70,filter_dim=3,min_contour_area=3000)#,max_contour_area=(i*1000)+3500)
+            objects = detect_objects(det, color_im, depth_im, det_cfg)
+            # Save the images
+            save_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),'depth_test_pics',str(i))
+            # pdb.set_trace()
+            save_images(objects, save_file,det_cfg)
+        except IndexError as ex:
+           print('error on index:',i)
+           pass
     '''
     # Inpaint
    
