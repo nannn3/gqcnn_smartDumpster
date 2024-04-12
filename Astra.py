@@ -3,7 +3,7 @@ from openni import openni2
 from openni import _openni2 as c_api
 import numpy as np
 from perception import CameraSensor
-
+from autolab_core import constants
 # Path to the OpenNI redistribution directory
 OPENNI_REDIST = '/home/tactile_manipulation/Desktop/OpenNI2SDK/OpenNI_2.3.0.86_202210111154_4c8f5aa4_beta6_linux/sdk/libs'
 
@@ -67,7 +67,8 @@ class Astra(CameraSensor):
         
         # Convert depth frame data to numpy array
         depth_array = np.ndarray((frame_depth.height, frame_depth.width),dtype=np.uint16,buffer=frame_depth_data)
-        
+         
+        depth_array = depth_array * constants.MM_TO_METERS
         return [color_array, depth_array]
     
     def stop(self):
