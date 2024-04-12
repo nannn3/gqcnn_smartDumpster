@@ -3,9 +3,16 @@ from openni import openni2
 from openni import _openni2 as c_api
 import numpy as np
 from perception import CameraSensor
-from autolab_core import constants
 # Path to the OpenNI redistribution directory
-OPENNI_REDIST = '/home/tactile_manipulation/Desktop/OpenNI2SDK/OpenNI_2.3.0.86_202210111154_4c8f5aa4_beta6_linux/sdk/libs'
+
+METERS_TO_MM = 1000.0
+MM_TO_METERS = 1.0 / METERS_TO_MM
+
+OPENNI_REDIST = os.environ.get("OPENNI2_REDIST",None)
+
+if OPENNI_REDIST == None:
+    raise ImportError ("OPENNI2_REDIST not found. Please install OpenNI2")
+
 
 class Astra(CameraSensor):
     """Class representing the Astra camera sensor."""
