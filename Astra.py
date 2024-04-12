@@ -3,11 +3,11 @@ from openni import openni2
 from openni import _openni2 as c_api
 import numpy as np
 from perception import CameraSensor
-# Path to the OpenNI redistribution directory
 
 METERS_TO_MM = 1000.0
 MM_TO_METERS = 1.0 / METERS_TO_MM
 
+# Path to the OpenNI redistribution directory
 OPENNI_REDIST = os.environ.get("OPENNI2_REDIST",None)
 
 if OPENNI_REDIST == None:
@@ -61,7 +61,11 @@ class Astra(CameraSensor):
         self._color_stream.start()
 
     def frames(self):
-        """Read frames from the Astra camera."""
+        """Read frames from the Astra camera.
+            Returns: list of np.NDArrays, [RGB,Depth]
+                where RGB is a 480x640x3 png array
+                Depth is a 480x640x1 array of floats representing distance in meters
+        """
         # Read color and depth frames
         frame_color = self._color_stream.read_frame()
         frame_depth = self._depth_stream.read_frame()
