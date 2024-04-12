@@ -1,5 +1,7 @@
 import json
 
+
+
 class Detector:
     def __init__(self, config_file):
         """
