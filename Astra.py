@@ -33,7 +33,7 @@ class Astra(CameraSensor):
         self._color_stream = self._dev.create_color_stream()
         # Set mirroring for both streams
         self._depth_stream.set_mirroring_enabled(self.MIRRORING)
-        self._color_stream.set_mirroring_enabled(self.MIRRORING)
+#        self._color_stream.set_mirroring_enabled(self.MIRRORING)
         
         # Configure depth and color stream video modes
         #TODO is this actually required?
@@ -88,4 +88,5 @@ if __name__ == '__main__':
         # Display depth and color frames
         cv2.imshow('depth',depth)
         cv2.imshow('color',color)
+        
         cv2.waitKey(1)
