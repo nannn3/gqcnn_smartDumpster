@@ -75,7 +75,7 @@ class Astra(CameraSensor):
         # Convert depth frame data to numpy array
         depth_array = np.ndarray((frame_depth.height, frame_depth.width),dtype=np.uint16,buffer=frame_depth_data)
          
-        depth_array = depth_array * constants.MM_TO_METERS
+        depth_array = depth_array * MM_TO_METERS
         return [color_array, depth_array]
     
     def stop(self):
