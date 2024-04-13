@@ -1,3 +1,4 @@
+import pdb
 import scipy.ndimage.morphology as snm
 import numpy as np
 from Astra import Astra
@@ -14,9 +15,10 @@ def filter_binary_im(binary_im,w):
         binary_im_filtered = binary_im.apply(
             snm.grey_closing, structure=filter_struct
         )
+        return binary_im_filtered
         # ===
 if __name__ == "__main__":
-    camera = Astra()
+    camera = Astra.Astra()
     camera.start()
     while (1):
         color,depth = camera.frames()
@@ -31,7 +33,8 @@ if __name__ == "__main__":
         
         binary_im_filtered = filter_binary_im(final_obj_mask, 5) #TODO replace 5 with better value
     
-        
+        contours = binary_im_filtered.find_contours(self, min_area=0.0, max_area=np.inf)
+        pdb.set_trace() 
         cv.imshow("color",color)
         # cv.imshow("obj_mask_filtered",binary_im_filtered._image_data())
         cv.imshow("obj_mask_unfiltered",final_obj_mask._image_data())
