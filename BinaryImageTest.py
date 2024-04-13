@@ -33,7 +33,7 @@ if __name__ == "__main__":
         
         binary_im_filtered = filter_binary_im(final_obj_mask, 5) #TODO replace 5 with better value
     
-        contours = binary_im_filtered.find_contours(self, min_area=0.0, max_area=np.inf)
+        contours = binary_im_filtered.find_contours(min_area=0.0, max_area=np.inf)
         pdb.set_trace() 
         cv.imshow("color",color)
         # cv.imshow("obj_mask_filtered",binary_im_filtered._image_data())
