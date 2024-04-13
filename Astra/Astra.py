@@ -2,16 +2,21 @@ import cv2
 from openni import openni2
 from openni import _openni2 as c_api
 import numpy as np
-from perception import CameraSensor
 from autolab_core import CameraIntrinsics
 import os
 
+METERS_TO_MM = 1000.0
+MM_TO_METERS = 1.0 / METERS_TO_MM
+
 # Path to the OpenNI redistribution directory
-OPENNI_REDIST = '/home/tactile_manipulation/Desktop/OpenNI2SDK/OpenNI_2.3.0.86_202210111154_4c8f5aa4_beta6_linux/sdk/libs'
+OPENNI_REDIST = os.environ.get('OPENNI2_REDIST',None)
 
-class Astra(CameraSensor):
+if OPENNI_REDIST is None:
+    raise ImportError("OPENNI2_REDIST enviornment vairable not set. Make sure that openni2 is installed")
+
+
+class Astra():
     """Class representing the Astra camera sensor."""
-
     # Default settings for the Astra camera
     WIDTH = 640
     HEIGHT = 480
@@ -52,7 +57,7 @@ class Astra(CameraSensor):
         return self._ir_intr
     
     @property
-    def color_intrinsics(self)
+    def color_intrinsics(self):
         '''
         Return:
             CameraIntrinsics obj
@@ -92,7 +97,10 @@ class Astra(CameraSensor):
         self._running = True
 
     def frames(self):
-        """Read frames from the Astra camera."""
+        """Read frames from the Astra camera.
+            Returns:
+                list of np.NDArrays representing the color as a 480x640x3 png and depth as a 480x640x1 array of floats representing the distance in Meters
+        """
         # Read color and depth frames
         frame_color = self._color_stream.read_frame()
         frame_depth = self._depth_stream.read_frame()
@@ -105,7 +113,7 @@ class Astra(CameraSensor):
         
         # Convert depth frame data to numpy array
         depth_array = np.ndarray((frame_depth.height, frame_depth.width),dtype=np.uint16,buffer=frame_depth_data)
-        
+        depth_array = depth_array * MM_TO_METERS #covert to a float array in meters 
         return [color_array, depth_array]
     
     def stop(self):
