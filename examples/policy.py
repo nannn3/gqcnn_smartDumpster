@@ -40,7 +40,7 @@ import numpy as np
 
 from autolab_core import (YamlConfig, Logger, BinaryImage, CameraIntrinsics,
                           ColorImage, DepthImage, RgbdImage)
-from visualization import Visualizer2D as vis
+import cv2 as cv
 
 from gqcnn.grasping import (RobustGraspingPolicy,
                             CrossEntropyRobustGraspingPolicy, RgbdImageState,
@@ -257,11 +257,4 @@ if __name__ == "__main__":
 
     # Vis final grasp.
     if policy_config["vis"]["final_grasp"]:
-        vis.figure(size=(10, 10))
-        vis.imshow(rgbd_im.depth,
-                   vmin=policy_config["vis"]["vmin"],
-                   vmax=policy_config["vis"]["vmax"])
-        vis.grasp(action.grasp, scale=2.5, show_center=False, show_axis=True)
-        vis.title("Planned grasp at depth {0:.3f}m with Q={1:.3f}".format(
-            action.grasp.depth, action.q_value))
-        vis.show()
+    
