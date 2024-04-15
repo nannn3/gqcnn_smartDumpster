@@ -257,4 +257,7 @@ if __name__ == "__main__":
 
     # Vis final grasp.
     if policy_config["vis"]["final_grasp"]:
-    
+        p1,p2,depth = action.grasp.feature_vec()
+        im_rec = cv.retangle(depth_im,p1,p2,(255,0,0),1)
+        cv.imshow(im_rec)
+        cv.waitKey(1)
