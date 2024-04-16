@@ -50,6 +50,21 @@ from gqcnn.utils import GripperMode
 # Set up logger.
 logger = Logger.get_logger("examples/policy.py")
 
+def draw_grasp(action,im):
+        '''Draws a rectangle on the image
+            Params:
+                Action: obj:action
+                im:Image(obj)
+            returns: png to be shown
+        '''
+        foo = action.grasp.feature_vec
+        p1 = (int(foo[0]),int(foo[1]))
+        p2 = (int(foo[2]),int(foo[3]))
+        depth = foo[4]
+        
+        im_rec = cv.rectangle(im._image_data(),p1,p2,(255,0,0),1)
+        return im_rec
+
 if __name__ == "__main__":
     # Parse args.
     parser = argparse.ArgumentParser(
@@ -256,12 +271,7 @@ if __name__ == "__main__":
 
     # Vis final grasp.
     if policy_config["vis"]["final_grasp"]:
-        foo = action.grasp.feature_vec
-        p1 = (int(foo[0]),int(foo[1]))
-        p2 = (int(foo[2]),int(foo[3]))
-        depth = foo[4]
-        
-        im_rec = cv.rectangle(depth_im._image_data(),p1,p2,(255,0,0),1)
-        while 1:
-            cv.imshow('planned final grasp',im_rec)
+        im = draw_grasp(action,depth_im)
+        while(1):
+            cv.imshow('planned grasp',im)
             cv.waitKey(1)
