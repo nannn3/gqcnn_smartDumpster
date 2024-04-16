@@ -74,6 +74,12 @@ if __name__ == "__main__":
                         default=None,
                         help="name of a trained model to run")
     parser.add_argument(
+        "--color_image",
+        type=str,
+        default=None,
+        help="path to a png representing a color image")
+        
+    parser.add_argument(
         "--depth_image",
         type=str,
         default=None,
@@ -102,6 +108,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     model_name = args.model_name
     depth_im_filename = args.depth_image
+    color_im_filename = args.color_image
     segmask_filename = args.segmask
     camera_intr_filename = args.camera_intr
     model_dir = args.model_dir
@@ -201,9 +208,8 @@ if __name__ == "__main__":
     # Read images.
     depth_data = np.load(depth_im_filename)
     depth_im = DepthImage(depth_data, frame=camera_intr.frame)
-    color_im = ColorImage(np.zeros([depth_im.height, depth_im.width,
-                                    3]).astype(np.uint8),
-                          frame=camera_intr.frame)
+    if color_im_filename is not None:
+        color_im = ColorImage.load(color_im_filename)
 
     # Optionally read a segmask.
     segmask = None
@@ -271,7 +277,10 @@ if __name__ == "__main__":
 
     # Vis final grasp.
     if policy_config["vis"]["final_grasp"]:
-        im = draw_grasp(action,depth_im)
+        if color_im_filename is not None:
+            im = draw_grasp(action,color_im)
+        else:
+            im = draw_grasp(action,depth_im)
         while(1):
             cv.imshow('planned grasp',im)
             cv.waitKey(1)
