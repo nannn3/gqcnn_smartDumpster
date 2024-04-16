@@ -35,7 +35,6 @@ import argparse
 import json
 import os
 import time
-
 import numpy as np
 
 from autolab_core import (YamlConfig, Logger, BinaryImage, CameraIntrinsics,
@@ -257,7 +256,12 @@ if __name__ == "__main__":
 
     # Vis final grasp.
     if policy_config["vis"]["final_grasp"]:
-        p1,p2,depth = action.grasp.feature_vec()
-        im_rec = cv.retangle(depth_im,p1,p2,(255,0,0),1)
-        cv.imshow(im_rec)
-        cv.waitKey(1)
+        foo = action.grasp.feature_vec
+        p1 = (int(foo[0]),int(foo[1]))
+        p2 = (int(foo[2]),int(foo[3]))
+        depth = foo[4]
+        
+        im_rec = cv.rectangle(depth_im._image_data(),p1,p2,(255,0,0),1)
+        while 1:
+            cv.imshow('planned final grasp',im_rec)
+            cv.waitKey(1)
