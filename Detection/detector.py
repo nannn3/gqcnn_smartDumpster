@@ -50,7 +50,7 @@ class Detector:
         overlayed_bin_ims = foreground_mask.mask_binary(filtered_depth_im)
         binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))        
         contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
-        return contours
+        return contours,binary_im_filtered
         
     def create_foreground_mask(self,color_im):
         """
@@ -151,7 +151,21 @@ class Detector:
         self.cfg = {}
 
 
-
+def find_contour_near_point(contours,pt):
+        '''
+        Picks out the contour containing the point pt
+        Args:
+            contours: list of cv2 contour objects
+            pt : (int x , int y)
+        Returns:
+            contour: cv2 contour object containing pt or None if not found
+        '''
+    x_click,y_click = pt
+    for obj in contours:
+        x,y,w,h = obj.boundingRect()
+        if (x_click >= x && x_click <= x + w) && (y_click >= y && y_click <= y+h):
+            return obj
+    return None
 
 if __name__ == "__main__":
     from Astra import Astra
@@ -173,10 +187,10 @@ if __name__ == "__main__":
             posList.append((x, y))
             runflag = True
     cv.setMouseCallback('color', onMouse)
-    posNp = np.array(posList)     # convert to NumPy for later use
+    
     # Save example configuration to a JSON file
     with open("example_config.json", "w") as f:
-        json.dump(example_cfg, f)
+        json.dump(example_cfg, f)   
 
     # Create detector instance with example configuration
     detector = Detector("example_config.json")
@@ -187,11 +201,16 @@ if __name__ == "__main__":
     
     while True:
         color, depth = camera.frames()
-        contours  = detector.detect_objects(color, depth)
         cv.imshow("color", color)
         if runflag:
             # Get segmask of object nearest mouseclick
+            runflag = False
+            contours,bin_im  = detector.detect_objects(color, depth)
+            containing_contour = find_contour_near_point(contours,posList[0])
+            posList.pop(0)
+            cv.imshow('result',bin_im._image_data())
             
+             
         cv.waitKey(1)
         
        
