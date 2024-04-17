@@ -168,7 +168,7 @@ def find_contour_near_point(contours,pt):
     return None
 
 if __name__ == "__main__":
-    from Astra import Astra
+    from ..Astra import Astra
     # Example configuration dictionary with original values
     example_cfg = {
         'depth_threshold_min': 0.5,  # Minimum depth threshold for object detection
