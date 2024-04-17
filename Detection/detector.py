@@ -208,7 +208,8 @@ if __name__ == "__main__":
             contours,bin_im  = detector.detect_objects(color, depth)
             containing_contour = find_contour_near_point(contours,posList[0])
             posList.pop(0)
-            cv.imshow('result',bin_im._image_data())
+            single_obj_bin_im = bin_im.contour_mask(containing_contour)
+            cv.imshow('result',single_obj_bin_im._image_data())
             
              
         cv.waitKey(1)
