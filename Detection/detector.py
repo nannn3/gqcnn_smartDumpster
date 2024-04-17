@@ -83,7 +83,7 @@ class Detector:
         depth_max = self.get_cfg('depth_threshold_max')
         if depth_max <= depth_min:
             raise ValueError("depth_threshold_min must be smaller than depth_threshold_max")
-        binary_im = depth_im(depth_im.threshold(depth_min,depth_max)
+        binary_im = depth_im.threshold(depth_min,depth_max)
         depth_mask = binary_im.invalid_pixel_mask() # This creates a binary image where things outside the depth thresholds are white, so it needs to be inverted 
         right_depth_mask = depth_mask.inverse()
         return right_depth_mask
@@ -152,23 +152,22 @@ class Detector:
 
 
 def find_contour_near_point(contours,pt):
-        '''
+    '''
         Picks out the contour containing the point pt
         Args:
             contours: list of cv2 contour objects
             pt : (int x , int y)
         Returns:
             contour: cv2 contour object containing pt or None if not found
-        '''
+    '''
     x_click,y_click = pt
     for obj in contours:
         x,y,w,h = obj.boundingRect()
-        if (x_click >= x && x_click <= x + w) && (y_click >= y && y_click <= y+h):
+        if (x_click >= x and x_click <= x + w) and (y_click >= y and y_click <= y+h):
             return obj
     return None
-
+from Astra import Astra
 if __name__ == "__main__":
-    from ..Astra import Astra
     # Example configuration dictionary with original values
     example_cfg = {
         'depth_threshold_min': 0.5,  # Minimum depth threshold for object detection
@@ -181,11 +180,12 @@ if __name__ == "__main__":
     posList = []
     runflag = False
     def onMouse(event, x, y, flags, param):
-    'captures mouse x and y when mouse clicks'
+        'captures mouse x and y when mouse clicks'
         global posList, runflag
         if event == cv.EVENT_LBUTTONDOWN:
             posList.append((x, y))
             runflag = True
+    cv.namedWindow('color')
     cv.setMouseCallback('color', onMouse)
     
     # Save example configuration to a JSON file
