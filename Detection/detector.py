@@ -1,3 +1,4 @@
+import pdb
 import scipy.ndimage.morphology as snm
 import numpy as np
 from autolab_core import ColorImage, DepthImage, BinaryImage
@@ -63,7 +64,7 @@ class Detector:
             BinaryImage: The foreground mask.
         """
         mask_threshold = self.get_cfg('foreground_mask_threshold')
-        foreground_mask = color_im.foreground_mask(mask_threshold, ignore_black=False)
+        foreground_mask = color_im.foreground_mask(mask_threshold)
         return foreground_mask
         
     def create_threshold_im(self,depth_im):
@@ -162,8 +163,13 @@ def find_contour_near_point(contours,pt):
     '''
     x_click,y_click = pt
     for obj in contours:
-        x,y,w,h = obj.boundingRect()
-        if (x_click >= x and x_click <= x + w) and (y_click >= y and y_click <= y+h):
+       # pdb.set_trace()
+        box = obj.bounding_box
+        x,y = box.center
+        width = box.width
+        height = box.height
+
+        if (x_click >= x - width/2 and x_click <= x + width/2) and (y_click >= y - height/2 and y_click <= y+ height/2):
             return obj
     return None
 from Astra import Astra
@@ -206,10 +212,17 @@ if __name__ == "__main__":
             # Get segmask of object nearest mouseclick
             runflag = False
             contours,bin_im  = detector.detect_objects(color, depth)
+            print(contours)
+            cv.imshow('all_obj',bin_im._image_data())
+            cv.waitKey(1)
+                  
             containing_contour = find_contour_near_point(contours,posList[0])
             posList.pop(0)
-            single_obj_bin_im = bin_im.contour_mask(containing_contour)
-            cv.imshow('result',single_obj_bin_im._image_data())
+            if containing_contour is None:
+                print("no contour found")
+            else:
+                single_obj_bin_im = bin_im.contour_mask(containing_contour)
+                cv.imshow('result',single_obj_bin_im._image_data())
             
              
         cv.waitKey(1)
