@@ -27,29 +27,15 @@ class Detector:
             key (str): The key for the configuration value.
 
         Returns:
-            The configuration value, or None if the key is not found.
-        """
-        return self.cfg.get(key, None)
+            The configuration value.
 
-    def set_cfg(self, key, value):
+        Raises:
+            KeyError: If the key is not found in the configuration.
         """
-        Set a configuration value.
-
-        Args:
-            key (str): The key for the configuration value.
-            value: The value to set.
-        """
-        self.cfg[key] = value
-
-    def remove_cfg(self, key):
-        """
-        Remove a key from the configuration.
-
-        Args:
-            key (str): The key to remove.
-        """
-        if key in self.cfg:
-            del self.cfg[key]
+        try:
+            return self.cfg[key]
+        except KeyError:
+            raise KeyError(f"Key '{key}' not found in configuration.")
 
     def detect_objects(self, color, depth):
         """
@@ -60,34 +46,65 @@ class Detector:
             depth (np.ndarray): The depth image.
 
         Returns:
-            contours (ls) : [cv2.contours] of all detected objects in frame.
+           contours (ls): [cv2.contours]
         """
         color_im = ColorImage(color)
         depth_im = DepthImage(depth)
-
-        filtered_depth_im = depth_im.threshold(.5,1)
-        bin_im = color_im.foreground_mask(50, ignore_black=False)
-        depth_mask = filtered_depth_im.invalid_pixel_mask()
-        right_depth_mask = depth_mask.inverse()
-        final_obj_mask = bin_im.mask_binary(right_depth_mask)
         
-        binary_im_filtered = self.filter_im(final_obj_mask, 5)  #TODO Replace 5 with non-arbitrary value
-        contours = binary_im_filtered.find_contours(min_area=50.0, max_area=np.inf)
-        if len(contours) == 0:
-            raise ValueError ("No objects found in frame")        
+        filtered_depth_im = self.create_threshold_im(depth_im)
+        foreground_mask = self.create_foreground_mask(color_im)
+        overlayed_bin_ims = foreground_mask.mask_binary(filtered_depth_im)
+        binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))
         
+        contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
         return contours
+        
+    def create_foreground_mask(self,color_im):
+        """
+        Create a foreground mask from a color image.
 
+        Args:
+            color_im (ColorImage): The color image.
+
+        Returns:
+            BinaryImage: The foreground mask.
+        """
+        mask_threshold = self.get_cfg('foreground_mask_threshold')
+        foreground_mask = color_im.foreground_mask(mask_threshold, ignore_black=False)
+        return foreground_mask
+        
+    def create_threshold_im(self,depth_im):
+        """
+        Create a thresholded binary image from a depth image.
+        Things closer than 'depth_threshold_min' or further than 'depth_threshold_max' are masked out
+        Args:
+            depth_im (DepthImage): The depth image.
+
+        Returns:
+            right_depth_mask : The thresholded binary image.
+
+        Raises:
+            ValueError: If if depth_threshold_min is greater than or equal to depth_threshold_max.
+        """
+        depth_min = self.get_cfg('depth_threshold_min')
+        depth_max = self.get_cfg('depth_threshold_max')
+        if depth_max <= depth_min:
+            raise ValueError("depth_threshold_min must be smaller than depth_threshold_max")
+        binary_im = depth_im(depth_im.threshold(depth_min,depth_max)
+        depth_mask = binary_im.invalid_pixel_mask() # This creates a binary image where things outside the depth thresholds are white, so it needs to be inverted 
+        right_depth_mask = depth_mask.inverse()
+        return right_depth_mask
+        
     def filter_im(self, im, w):
         """
-        Filter a binary image using morphological closing.
+        Filter an image using morphological closing.
 
         Args:
             binary_im (BinaryImage): The binary image to filter.
             w (int): The size of the filter.
 
         Returns:
-            BinaryImage: The filtered binary image.
+            im_filtered: The filtered  image.
         """
         y, x = np.ogrid[-w / 2 + 1 : w / 2 + 1, -w / 2 + 1 : w / 2 + 1]
         mask = x * x + y * y <= w / 2 * w / 2
@@ -141,12 +158,31 @@ class Detector:
         self.cfg = {}
 
 if __name__ == "__main__":
-    detector = Detector("config.json")
+    # Example configuration dictionary with original values
+    example_cfg = {
+        'depth_threshold_min': 0.5,  # Minimum depth threshold for object detection
+        'depth_threshold_max': 1.0,  # Maximum depth threshold for object detection
+        'foreground_mask_threshold': 50,  # Threshold for foreground mask generation
+        'morphological_filter_size': 5,  # Size of the morphological filter
+        'min_contour_area': 50.0,  # Minimum contour area for object detection objs
+        'max_contour_area': np.inf # Maximum contour area for object detection objs 
+    }
+
+    # Save example configuration to a JSON file
+    with open("example_config.json", "w") as f:
+        json.dump(example_cfg, f)
+
+    # Create detector instance with example configuration
+    detector = Detector("example_config.json")
+
+    # Assuming camera initialization
     camera = Astra.Astra()
     camera.start()
+    
     while True:
         color, depth = camera.frames()
-        contours = detector.detect_objects(color, depth)
-        #TODO Hardcode point for test here? To be replaced by mouseclick event in later version
+        obj_0_seg_mask = detector.detect_objects(color, depth)
+        
+        cv.imshow('obj-0-segmask', obj_0_seg_mask._image_data())
         cv.imshow("color", color)
         cv.waitKey(1)
