@@ -64,7 +64,7 @@ class Detector:
             BinaryImage: The foreground mask.
         """
         mask_threshold = self.get_cfg('foreground_mask_threshold')
-        foreground_mask = color_im.foreground_mask(mask_threshold)
+        foreground_mask = color_im.foreground_mask(mask_threshold,ignore_black = True)
         return foreground_mask
         
     def create_threshold_im(self,depth_im):
@@ -162,15 +162,18 @@ def find_contour_near_point(contours,pt):
             contour: cv2 contour object containing pt or None if not found
     '''
     x_click,y_click = pt
+    print(f'mouseX:{x_click}, mouseY:{y_click}')
     for obj in contours:
-       # pdb.set_trace()
         box = obj.bounding_box
-        x,y = box.center
+        y,x = box.center
+        print(f'box center x:{x}, box center y:{y}')
         width = box.width
         height = box.height
-
         if (x_click >= x - width/2 and x_click <= x + width/2) and (y_click >= y - height/2 and y_click <= y+ height/2):
+            print(f'Chosen object x-width/2 ={x-width/2}, x + width = {x+width/2}\n' 
+                  f' Y - height/2 = {y-height/2}, Y + height = {y+height/2}')
             return obj
+            
     return None
 from Astra import Astra
 if __name__ == "__main__":
@@ -212,7 +215,6 @@ if __name__ == "__main__":
             # Get segmask of object nearest mouseclick
             runflag = False
             contours,bin_im  = detector.detect_objects(color, depth)
-            print(contours)
             cv.imshow('all_obj',bin_im._image_data())
             cv.waitKey(1)
                   
