@@ -12,12 +12,7 @@ class Detector:
         Args:
             config_file (str): Path to the configuration file.
         """
-        try:
-            with open(config_file, 'r') as f:
-                self.cfg = json.load(f)
-        except Exception as e:
-            print(f"Error loading config file: {e}")
-            self.cfg = {}
+        self.load_cfg(config_file)
 
     def get_cfg(self, key):
         """
@@ -49,13 +44,11 @@ class Detector:
            contours (ls): [cv2.contours]
         """
         color_im = ColorImage(color)
-        depth_im = DepthImage(depth)
-        
+        depth_im = DepthImage(depth)        
         filtered_depth_im = self.create_threshold_im(depth_im)
         foreground_mask = self.create_foreground_mask(color_im)
         overlayed_bin_ims = foreground_mask.mask_binary(filtered_depth_im)
-        binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))
-        
+        binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))        
         contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
         return contours
         
@@ -157,7 +150,11 @@ class Detector:
         """
         self.cfg = {}
 
+
+
+
 if __name__ == "__main__":
+    from Astra import Astra
     # Example configuration dictionary with original values
     example_cfg = {
         'depth_threshold_min': 0.5,  # Minimum depth threshold for object detection
@@ -167,7 +164,16 @@ if __name__ == "__main__":
         'min_contour_area': 50.0,  # Minimum contour area for object detection objs
         'max_contour_area': np.inf # Maximum contour area for object detection objs 
     }
-
+    posList = []
+    runflag = False
+    def onMouse(event, x, y, flags, param):
+    'captures mouse x and y when mouse clicks'
+        global posList, runflag
+        if event == cv.EVENT_LBUTTONDOWN:
+            posList.append((x, y))
+            runflag = True
+    cv.setMouseCallback('color', onMouse)
+    posNp = np.array(posList)     # convert to NumPy for later use
     # Save example configuration to a JSON file
     with open("example_config.json", "w") as f:
         json.dump(example_cfg, f)
@@ -181,8 +187,11 @@ if __name__ == "__main__":
     
     while True:
         color, depth = camera.frames()
-        obj_0_seg_mask = detector.detect_objects(color, depth)
-        
-        cv.imshow('obj-0-segmask', obj_0_seg_mask._image_data())
+        contours  = detector.detect_objects(color, depth)
         cv.imshow("color", color)
+        if runflag:
+            # Get segmask of object nearest mouseclick
+            
         cv.waitKey(1)
+        
+       
