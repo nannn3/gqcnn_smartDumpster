@@ -292,6 +292,7 @@ if __name__ == "__main__":
     policy_start = time.time()
     action = policy(state)
     logger.info("Planning took %.3f sec" % (time.time() - policy_start))
+    logger.info("Center point of grasp is",action.grasp.center.vector[0],action.grasp.center.vector[1])
     # Vis final grasp.
     if policy_config["vis"]["final_grasp"]:
         if color_im_filename is not None:
