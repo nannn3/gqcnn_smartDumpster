@@ -65,6 +65,5 @@ if __name__=="__main__":
                 print("No object found")
             else:
                 single_obj_bin_im = full_binary_image.contour_mask(containing_contour)
-                cv.imshow('result',single_obj_bin_im._image_data())
                 invokeDexNet(color,depth,single_obj_bin_im)
         cv.waitKey(1)
