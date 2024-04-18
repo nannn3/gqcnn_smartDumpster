@@ -3,6 +3,7 @@ from Detection import detector
 import cv2 as cv
 import os
 from autolab_core import BinaryImage, ColorImage, DepthImage
+import subprocess
 
 ImageFolder = 'ImTestPics'
 
@@ -12,13 +13,19 @@ def invokeDexNet(color,depth,segmask):
     segmask.png, and depth.npy and calling examples/policy.py.
     eventually, this should be rebuilt as our own implementation of policy.py
     '''
-    segmask.save(os.path.join(ImageFolder,'segmask.png'))
-    color_im = ColorImage(color)
-    color_im.save(os.path.join(ImageFolder,'color.png'))
-    depth_im = DepthImage(depth)
-    depth_im.save(os.path.join(ImageFolder,'depth.npy'))
-
+    segmask_file = os.path.join(ImageFolder,'segmask.png')
+    color_file = (os.path.join(ImageFolder,'color.png'))   
+    depth_file = (os.path.join(ImageFolder,'depth.npy'))
     
+    color_im = ColorImage(color)
+    depth_im = DepthImage(depth)
+
+    segmask.save(segmask_file)
+    color_im.save(color_file)
+    depth_im.save(depth_file)
+    
+    command = ["python","examples/policy.py","FC-GQCNN-4.0-PJ","--fully_conv","--color_image",color_file,"--depth_image",depth_file,"--segmask",segmask_file]
+    subprocess.run(command)
 
 if __name__=="__main__":
     #Setup camera:

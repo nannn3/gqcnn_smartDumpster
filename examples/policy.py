@@ -36,7 +36,6 @@ import json
 import os
 import time
 import numpy as np
-
 from autolab_core import (YamlConfig, Logger, BinaryImage, CameraIntrinsics,
                           ColorImage, DepthImage, RgbdImage)
 import cv2 as cv
@@ -50,20 +49,39 @@ from gqcnn.utils import GripperMode
 # Set up logger.
 logger = Logger.get_logger("examples/policy.py")
 
-def draw_grasp(action,im):
-        '''Draws a rectangle on the image
-            Params:
-                Action: obj:action
-                im:Image(obj)
-            returns: png to be shown
-        '''
-        foo = action.grasp.feature_vec
-        p1 = (int(foo[0]),int(foo[1]))
-        p2 = (int(foo[2]),int(foo[3]))
-        depth = foo[4]
-        
-        im_rec = cv.rectangle(im._image_data(),p1,p2,(255,0,0),1)
-        return im_rec
+
+
+def draw_grasp(action, im):
+    '''Draws a rectangle and circles on the image
+        Params:
+            action: obj: action
+            im: Image(obj)
+        Returns: png to be shown
+    '''
+    foo = action.grasp.feature_vec
+    p1 = (int(foo[0]), int(foo[1]))
+    p2 = (int(foo[2]), int(foo[3]))
+    depth = foo[4]
+
+    # Draw rectangle
+    im_rec = cv.rectangle(im._image_data(), p1, p2, (255, 0, 0), 1)
+    
+    # Draw circles at p1 and p2
+    radius = 3  # Adjust the radius of the circles as needed
+    thickness = 2  # Adjust the thickness of the circles as needed
+    im_rec = cv.circle(im_rec, p1, radius, (0, 0, 255), thickness)
+    im_rec = cv.circle(im_rec, p2, radius, (0, 0, 255), thickness)
+    
+    # Add depth text above the rectangle
+    font = cv.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.5
+    font_thickness = 1
+    text = f"Depth: {depth:.2f}"
+    text_size, _ = cv.getTextSize(text, font, font_scale, font_thickness)
+    text_position = (p1[0], p1[1] - text_size[1] -25)  # Position text above the rectangle
+    im_rec = cv.putText(im_rec, text, text_position, font, font_scale, (255, 255, 255), font_thickness)
+    
+    return im_rec
 
 if __name__ == "__main__":
     # Parse args.
@@ -209,7 +227,7 @@ if __name__ == "__main__":
     depth_data = np.load(depth_im_filename)
     depth_im = DepthImage(depth_data, frame=camera_intr.frame)
     if color_im_filename is not None:
-        color_im = ColorImage.load(color_im_filename)
+        color_im = ColorImage.open(color_im_filename,frame =camera_intr.frame)
 
     # Optionally read a segmask.
     segmask = None
@@ -274,7 +292,6 @@ if __name__ == "__main__":
     policy_start = time.time()
     action = policy(state)
     logger.info("Planning took %.3f sec" % (time.time() - policy_start))
-
     # Vis final grasp.
     if policy_config["vis"]["final_grasp"]:
         if color_im_filename is not None:
@@ -283,4 +300,6 @@ if __name__ == "__main__":
             im = draw_grasp(action,depth_im)
         while(1):
             cv.imshow('planned grasp',im)
-            cv.waitKey(1)
+            key = cv.waitKey(1) & 0xFF
+            if key == ord('q'):
+                break
