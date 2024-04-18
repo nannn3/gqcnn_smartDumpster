@@ -64,7 +64,7 @@ class Detector:
             BinaryImage: The foreground mask.
         """
         mask_threshold = self.get_cfg('foreground_mask_threshold')
-        foreground_mask = color_im.foreground_mask(mask_threshold,ignore_black = True)
+        foreground_mask = color_im.foreground_mask(mask_threshold,ignore_black = False )
         return foreground_mask
         
     def create_threshold_im(self,depth_im):
@@ -151,37 +151,32 @@ class Detector:
         """
         self.cfg = {}
 
+    def find_contour_near_point(self,contours,pt):
+        '''
+            Picks out the contour containing the point pt
+            Args:
+                contours: list of cv2 contour objects
+                pt : (int x , int y)
+            Returns:
+                contour: cv2 contour object containing pt or None if not found
+        '''
+        x_click,y_click = pt
+        for obj in contours:
+            box = obj.bounding_box
+            y,x = box.center
+            width = box.width
+            height = box.height
+            if (x_click >= x - width/2 and x_click <= x + width/2) and (y_click >= y - height/2 and y_click <= y+ height/2):
+                return obj
+        return None
 
-def find_contour_near_point(contours,pt):
-    '''
-        Picks out the contour containing the point pt
-        Args:
-            contours: list of cv2 contour objects
-            pt : (int x , int y)
-        Returns:
-            contour: cv2 contour object containing pt or None if not found
-    '''
-    x_click,y_click = pt
-    print(f'mouseX:{x_click}, mouseY:{y_click}')
-    for obj in contours:
-        box = obj.bounding_box
-        y,x = box.center
-        print(f'box center x:{x}, box center y:{y}')
-        width = box.width
-        height = box.height
-        if (x_click >= x - width/2 and x_click <= x + width/2) and (y_click >= y - height/2 and y_click <= y+ height/2):
-            print(f'Chosen object x-width/2 ={x-width/2}, x + width = {x+width/2}\n' 
-                  f' Y - height/2 = {y-height/2}, Y + height = {y+height/2}')
-            return obj
-            
-    return None
-from Astra import Astra
 if __name__ == "__main__":
+    from Astra import Astra
     # Example configuration dictionary with original values
     example_cfg = {
         'depth_threshold_min': 0.5,  # Minimum depth threshold for object detection
-        'depth_threshold_max': 1.0,  # Maximum depth threshold for object detection
-        'foreground_mask_threshold': 50,  # Threshold for foreground mask generation
+        'depth_threshold_max': 1.5,  # Maximum depth threshold for object detection
+        'foreground_mask_threshold': 225,  # Threshold for foreground mask generation
         'morphological_filter_size': 5,  # Size of the morphological filter
         'min_contour_area': 50.0,  # Minimum contour area for object detection objs
         'max_contour_area': np.inf # Maximum contour area for object detection objs 
@@ -204,8 +199,8 @@ if __name__ == "__main__":
     # Create detector instance with example configuration
     detector = Detector("example_config.json")
 
-    # Assuming camera initialization
-    camera = Astra.Astra()
+    # camera initialization
+    camera = Astra()
     camera.start()
     
     while True:
@@ -218,7 +213,7 @@ if __name__ == "__main__":
             cv.imshow('all_obj',bin_im._image_data())
             cv.waitKey(1)
                   
-            containing_contour = find_contour_near_point(contours,posList[0])
+            containing_contour = detector.find_contour_near_point(contours,posList[0])
             posList.pop(0)
             if containing_contour is None:
                 print("no contour found")
