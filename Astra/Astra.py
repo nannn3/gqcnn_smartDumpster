@@ -4,7 +4,6 @@ from openni import _openni2 as c_api
 import numpy as np
 from autolab_core import CameraIntrinsics
 import os
-
 METERS_TO_MM = 1000.0
 MM_TO_METERS = 1.0 / METERS_TO_MM
 
@@ -21,7 +20,8 @@ class Astra():
     WIDTH = 640
     HEIGHT = 480
     FPS = 30
-    MIRRORING = True
+    DEPTH_MIRRORING = True
+    COLOR_MIRRORING = True 
 
     def __init__(self,color_intr=None,ir_intr=None):
         """Initialize Astra camera.
@@ -42,8 +42,11 @@ class Astra():
         
     def __del__(self):
         if self.is_running:
-            self.stop()
-    
+            try:
+                self.stop()
+            except:
+                pass
+
     @property
     def is_running(self):
         return self._running
@@ -73,9 +76,6 @@ class Astra():
         # Create depth and color streams
         self._depth_stream = self._dev.create_depth_stream()
         self._color_stream = self._dev.create_color_stream()
-        # Set mirroring for both streams
-        self._depth_stream.set_mirroring_enabled(self.MIRRORING)
-        self._color_stream.set_mirroring_enabled(self.MIRRORING)
         
         # Configure depth and color stream video modes
         #TODO is this actually required?
@@ -113,7 +113,12 @@ class Astra():
         
         # Convert depth frame data to numpy array
         depth_array = np.ndarray((frame_depth.height, frame_depth.width),dtype=np.uint16,buffer=frame_depth_data)
-        depth_array = depth_array * MM_TO_METERS #covert to a float array in meters 
+        depth_array = depth_array * MM_TO_METERS #covert to a float array in meters
+        if self.COLOR_MIRRORING:
+            color_array = np.fliplr(color_array)
+        if self.DEPTH_MIRRORING:
+            depth_array = np.fliplr(depth_array)
+        depth_array = cv2.GaussianBlur(depth_array,(3,3),0)
         return [color_array, depth_array]
     
     def stop(self):
