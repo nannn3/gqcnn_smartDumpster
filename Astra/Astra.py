@@ -2,33 +2,73 @@ import cv2
 from openni import openni2
 from openni import _openni2 as c_api
 import numpy as np
-from perception import CameraSensor
+from autolab_core import CameraIntrinsics
+import os
 
 METERS_TO_MM = 1000.0
 MM_TO_METERS = 1.0 / METERS_TO_MM
 
 # Path to the OpenNI redistribution directory
-OPENNI_REDIST = os.environ.get("OPENNI2_REDIST",None)
+OPENNI_REDIST = os.environ.get('OPENNI2_REDIST',None)
 
-if OPENNI_REDIST == None:
-    raise ImportError ("OPENNI2_REDIST not found. Please install OpenNI2")
+if OPENNI_REDIST is None:
+    #OpenNI is required to run the connection to the Astra. The environment variable is set automatically when you run `source /home/tactile_manipulation/Desktop/OpenNI2SDK/OpenNI_2.3.0.86_202210111154_4c8f5aa4_beta6_linux/OpenNIDevEnvironment`
+    raise ImportError("OPENNI2_REDIST enviornment vairable not set. Make sure that openni2 is installed")
 
 
-class Astra(CameraSensor):
+class Astra():
     """Class representing the Astra camera sensor."""
-
     # Default settings for the Astra camera
     WIDTH = 640
     HEIGHT = 480
     FPS = 30
-    MIRRORING = True
+    DEPTH_MIRRORING = True
+    COLOR_MIRRORING = True 
 
-    def __init__(self):
-        """Initialize Astra camera."""
+    def __init__(self,color_intr=None,ir_intr=None):
+        """Initialize Astra camera.
+        Param:
+            color_intr file path to .intr file containing data for the color camera
+            ir_intr file path to .intr file containing data for the ir camera
+        """
         self._color_stream = None
         self._depth_stream = None
         self._dev = None
+        self._color_intr = None
+        if color_intr is not None:
+            self._color_intr = CameraIntrinsics.load(color_intr)
+        self._ir_intr = None
+        if ir_intr is not None:
+            self._ir_intr = CameraIntrinsics.load(ir_intr)
+        self._running = False
+        
+    def __del__(self):
+        if self.is_running:
+            try:
+                self.stop()
+            except:
+                pass
 
+    @property
+    def is_running(self):
+        return self._running
+    
+    @property
+    def  ir_intrinsics(self):
+        '''
+        Return: 
+            CameraIntrinsics obj
+        '''
+        return self._ir_intr
+    
+    @property
+    def color_intrinsics(self):
+        '''
+        Return:
+            CameraIntrinsics obj
+        '''
+        return self._color_intr
+        
     def start(self):
         """Start the Astra camera."""
         # Initialize OpenNI
@@ -38,9 +78,6 @@ class Astra(CameraSensor):
         # Create depth and color streams
         self._depth_stream = self._dev.create_depth_stream()
         self._color_stream = self._dev.create_color_stream()
-        # Set mirroring for both streams
-        self._depth_stream.set_mirroring_enabled(self.MIRRORING)
-#        self._color_stream.set_mirroring_enabled(self.MIRRORING)
         
         # Configure depth and color stream video modes
         #TODO is this actually required?
@@ -59,12 +96,12 @@ class Astra(CameraSensor):
         # Start depth and color streams
         self._depth_stream.start()
         self._color_stream.start()
+        self._running = True
 
     def frames(self):
         """Read frames from the Astra camera.
-            Returns: list of np.NDArrays, [RGB,Depth]
-                where RGB is a 480x640x3 png array
-                Depth is a 480x640x1 array of floats representing distance in meters
+            Returns:
+                list of np.NDArrays representing the color as a 480x640x3 png and depth as a 480x640x1 array of floats representing the distance in Meters
         """
         # Read color and depth frames
         frame_color = self._color_stream.read_frame()
@@ -78,15 +115,45 @@ class Astra(CameraSensor):
         
         # Convert depth frame data to numpy array
         depth_array = np.ndarray((frame_depth.height, frame_depth.width),dtype=np.uint16,buffer=frame_depth_data)
-         
-        depth_array = depth_array * MM_TO_METERS
+        #depth_array = depth_array * MM_TO_METERS #covert to a float array in meters
+        if self.COLOR_MIRRORING:
+            color_array = np.fliplr(color_array)
+        if self.DEPTH_MIRRORING:
+            depth_array = np.fliplr(depth_array)
+
+        depth_array = self.preprocess_depth_array(depth_array)
         return [color_array, depth_array]
-    
+
+    def preprocess_depth_array(self,depth):
+        """
+        Placeholder to hold depth_array treamment, will be updated
+            Args: depth_array:np.ndarray reresenting the depth image 
+            Returns: depth_array:np.ndarray(float) representing the treated depth image
+        """
+        
+        depth_array = depth.astype('float32')
+        '''
+        # Normalize:
+        min_val = depth_array.min()
+        max_val = depth_array.max()
+        depth_array = (depth_array - min_val) / (max_val - min_val)
+        '''
+
+        '''
+        #GaussianBlur:
+        depth_array = cv2.GaussianBlur(depth_array,(3,3),0)
+        '''
+        # MedianBlur:
+        depth_array = cv2.medianBlur(depth_array,3)
+        depth_array = depth_array * MM_TO_METERS #covert to a float array in meters
+        return depth_array
+
     def stop(self):
         """Stop the Astra camera."""
         # Stop depth and color streams
         self._depth_stream.stop()
         self._color_stream.stop()
+        self._running = False
 
 if __name__ == '__main__':
     '''
@@ -100,5 +167,4 @@ if __name__ == '__main__':
         # Display depth and color frames
         cv2.imshow('depth',depth)
         cv2.imshow('color',color)
-        
         cv2.waitKey(1)
