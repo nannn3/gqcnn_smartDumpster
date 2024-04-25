@@ -15,11 +15,11 @@ policy:
   # metrics
   metric:
     type: fcgqcnn
-    gqcnn_model: /path/to/your/FC-GQ-Image-Wise
+    gqcnn_model: /home/tactile_manipulation/Desktop/SmartDumpsterDexNet/models/FC-GQCNN-4.0-PJ 
     gqcnn_backend: tf
     fully_conv_gqcnn_config:
-      im_height: 386
-      im_width: 516
+      im_height: 480 
+      im_width: 640
 
   # visualization
   policy_vis:
