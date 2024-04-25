@@ -62,7 +62,15 @@ def draw_grasp(action, im):
     p1 = (int(foo[0]), int(foo[1]))
     p2 = (int(foo[2]), int(foo[3]))
     depth = foo[4]
-
+    centroidX=action.grasp.center.vector[0]
+    centroidY=action.grasp.center.vector[1]
+    outfile = open("../../franky/franky/items/Items_Rot_Dep.txt","a")
+    outdict={"X_0":centroidX,"Y_0":centroidY,"X_1":p1[0],"Y_1":p1[1],"X_2":p2[0],"Y_2":p2[1],"Dep":depth}
+    outfile.write(str(outdict)+"\n")
+    
+    
+    
+    
     # Draw rectangle
     im_rec = cv.rectangle(im._image_data(), p1, p2, (255, 0, 0), 1)
     
@@ -240,7 +248,7 @@ if __name__ == "__main__":
         segmask = segmask.mask_binary(valid_px_mask)
 
     # Inpaint.
-    depth_im = depth_im.inpaint(rescale_factor=inpaint_rescale_factor)
+    #depth_im = depth_im.inpaint(rescale_factor=inpaint_rescale_factor)
 
     if "input_images" in policy_config["vis"] and policy_config["vis"][
             "input_images"]:
@@ -292,7 +300,9 @@ if __name__ == "__main__":
     policy_start = time.time()
     action = policy(state)
     logger.info("Planning took %.3f sec" % (time.time() - policy_start))
-    logger.info("Center point of grasp is",action.grasp.center.vector[0],action.grasp.center.vector[1])
+    print("Center point of grasp is",action.grasp.center.vector[0],action.grasp.center.vector[1])
+    
+    print("Depth of grasp: ",action.grasp.feature_vec[4])
     # Vis final grasp.
     if policy_config["vis"]["final_grasp"]:
         if color_im_filename is not None:

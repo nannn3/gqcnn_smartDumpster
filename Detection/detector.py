@@ -1,4 +1,3 @@
-import pdb
 import scipy.ndimage.morphology as snm
 import numpy as np
 from autolab_core import ColorImage, DepthImage, BinaryImage
@@ -48,8 +47,8 @@ class Detector:
         depth_im = DepthImage(depth)        
         filtered_depth_im = self.create_threshold_im(depth_im)
         foreground_mask = self.create_foreground_mask(color_im)
-        overlayed_bin_ims = foreground_mask.mask_binary(filtered_depth_im)
-        binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))        
+        #overlayed_bin_ims = foreground_mask.mask_binary(filtered_depth_im)
+        binary_im_filtered = self.filter_im(foreground_mask, self.get_cfg('morphological_filter_size'))        
         contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
         return contours,binary_im_filtered
         
@@ -64,7 +63,7 @@ class Detector:
             BinaryImage: The foreground mask.
         """
         mask_threshold = self.get_cfg('foreground_mask_threshold')
-        foreground_mask = color_im.foreground_mask(mask_threshold,ignore_black = False )
+        foreground_mask = color_im.foreground_mask(mask_threshold,ignore_black = True )
         return foreground_mask
         
     def create_threshold_im(self,depth_im):
@@ -86,8 +85,8 @@ class Detector:
             raise ValueError("depth_threshold_min must be smaller than depth_threshold_max")
         binary_im = depth_im.threshold(depth_min,depth_max)
         depth_mask = binary_im.invalid_pixel_mask() # This creates a binary image where things outside the depth thresholds are white, so it needs to be inverted 
-        right_depth_mask = depth_mask.inverse()
-        return right_depth_mask
+        #right_depth_mask = depth_mask.inverse()
+        return depth_mask
         
     def filter_im(self, im, w):
         """
@@ -173,14 +172,14 @@ class Detector:
 if __name__ == "__main__":
     from Astra import Astra
     # Example configuration dictionary with original values
-    example_cfg = {
+    '''example_cfg = {
         'depth_threshold_min': 0.5,  # Minimum depth threshold for object detection
         'depth_threshold_max': 1.5,  # Maximum depth threshold for object detection
         'foreground_mask_threshold': 225,  # Threshold for foreground mask generation
         'morphological_filter_size': 5,  # Size of the morphological filter
         'min_contour_area': 50.0,  # Minimum contour area for object detection objs
         'max_contour_area': np.inf # Maximum contour area for object detection objs 
-    }
+    }'''
     posList = []
     runflag = False
     def onMouse(event, x, y, flags, param):
@@ -193,18 +192,21 @@ if __name__ == "__main__":
     cv.setMouseCallback('color', onMouse)
     
     # Save example configuration to a JSON file
-    with open("example_config.json", "w") as f:
+    '''with open("example_config.json", "w") as f:
         json.dump(example_cfg, f)   
-
+    '''
     # Create detector instance with example configuration
     detector = Detector("example_config.json")
 
     # camera initialization
-    camera = Astra()
+    camera = Astra.Astra()
     camera.start()
     
     while True:
         color, depth = camera.frames()
+        depth_im = DepthImage(depth)
+        threshold_mask = detector.create_threshold_im(depth_im)
+        cv.imshow('threshold',threshold_mask._image_data())
         cv.imshow("color", color)
         if runflag:
             # Get segmask of object nearest mouseclick
