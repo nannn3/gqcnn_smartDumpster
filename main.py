@@ -2,15 +2,18 @@ from Astra import Astra
 from Detection import detector
 import cv2 as cv
 import os
-from autolab_core import BinaryImage, ColorImage, DepthImage, RgbdImage
+from autolab_core import BinaryImage, ColorImage, DepthImage, RgbdImage, YamlConfig, CameraIntrinsics
 
 import subprocess
 from gqcnn.grasping import RgbdImageState,FullyConvolutionalGraspingPolicyParallelJaw
+import time
+
 ImageFolder = 'ImTestPics'
 
 #initialize policy:
-policy = FullyConvolutionalGraspingPolicyParallelJaw(os.path.join(os.path.dirname(os.path.realpath(__file__)),"cfg/examples/fc_gqcnn_pj.yaml"))
-
+config = YamlConfig(os.path.join(os.path.dirname(os.path.realpath(__file__)),"cfg/examples/fc_gqcnn_pj.yaml"))
+policy_config = config["policy"]
+policy = FullyConvolutionalGraspingPolicyParallelJaw(policy_config)
 def invokeDexNet(color,depth,segmask):
     '''
     for now we can probably just directly invoke it from this python script by saving color.png
@@ -25,24 +28,24 @@ def invokeDexNet(color,depth,segmask):
     depth_im = DepthImage(depth).inpaint()
 
     rgbd_im = RgbdImage.from_color_and_depth(color_im,depth_im)
-    camera_intr = CameraInstrinsics.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),"Astra/Astra_IR.intr"))
+    camera_intr = CameraIntrinsics.load(os.path.join(os.path.dirname(os.path.realpath(__file__)),"Astra/Astra_IR.intr"))
     state = RgbdImageState(rgbd_im, camera_intr, segmask = segmask)
-    
+    policy_start = time.time()
     action = policy(state)
+    print('\n Planning took %.3f sec' %(time.time()-policy_start))
     print(action.grasp.feature_vec)
     #segmask.save(segmask_file)
     #color_im.save(color_file)
     #depth_im.save(depth_file)
     
-    command = ["python","examples/policy.py","FC-GQCNN-4.0-PJ","--fully_conv","--color_image",color_file,"--depth_image",depth_file,"--segmask",segmask_file]
-    subprocess.run(command)
+    #command = ["python","examples/policy.py","FC-GQCNN-4.0-PJ","--fully_conv","--color_image",color_file,"--depth_image",depth_file,"--segmask",segmask_file]
+    #subprocess.run(command)
 
 if __name__=="__main__":
     #Setup camera:
     camera = Astra.Astra()
     camera.start()
     
-    policy = FullyConvolutionalGraspingPolicyParallelJaw(os.path.join(os.path.dirname(os.path.realpath(__file__)),"cfg/examples/fc_gqcnn_pj.yaml"))
 
 
     # Check if the folder exists
