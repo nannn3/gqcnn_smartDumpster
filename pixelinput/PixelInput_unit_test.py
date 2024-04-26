@@ -21,14 +21,16 @@ class TestPixelInput(unittest.TestCase):
             x, y = self.pixel_input.get_pixel_coordinates()
             self.assertEqual((x, y), (100, 200))
 
-        # Test with empty posList
-        with patch.object(self.pixel_input, '_posList', []):  # Empty list
-            self.assertIsNone(self.pixel_input.get_pixel_coordinates())
-
         # Test with invalid coordinates in posList
         with patch.object(self.pixel_input, '_posList', [(700, 480)]):  # Invalid coordinates
             with self.assertRaises(ValueError):
                 self.pixel_input.get_pixel_coordinates()
+        # Test no cordinates given:
+        with patch.object(self.pixel_input,'_posList',[]):
+            x,y = self.pixel_input.get_pixel_coordinates()
+            assert(x is None)
+            assert(y is None)
+
 
     def test_x_and_y_properties(self):
         # Test the properties x and y after setting valid pixel coordinates

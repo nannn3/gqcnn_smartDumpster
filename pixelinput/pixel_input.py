@@ -7,12 +7,28 @@ class PixelInput:
         self._posList = []
         self._runflag = False
 
-        # Set up named windows and mouse callback
+        # Assign mouse click to the windows
         cv.namedWindow('color')
         cv.setMouseCallback('color', self.on_mouse_click)
+        cv.namedWindow('binary_image')
+        cv.setMouseCallback('binary_image', self.on_mouse_click)
+        cv.namedWindow('depth')
+        cv.setMouseCallback('depth', self.on_mouse_click)
+
 
     def on_mouse_click(self, event, x, y, flags, param):
-        """Mouse click event handler."""
+        """
+        Mouse click event handler.
+
+        Records mouse click positions for object detection.
+
+        Parameters:
+            event: Type of mouse event.
+            x (int): x-coordinate of the mouse click.
+            y (int): y-coordinate of the mouse click.
+            flags: Flags indicating the state of the mouse buttons.
+            param: Additional parameters.
+        """
         if event == cv.EVENT_LBUTTONDOWN:
             self._posList.append((x, y))
             self._runflag = True
@@ -34,7 +50,7 @@ class PixelInput:
                 raise ValueError(f"Invalid pixel coordinates: ({x}, {y}). "
                                  f"Coordinates must be integers and within range x=[0, 639], y=[0, 479].")
         else:
-            return None
+            return None,None
 
     @property
     def x(self):
