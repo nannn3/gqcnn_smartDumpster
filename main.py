@@ -1,11 +1,13 @@
 import pdb
-from Astra import Astra
-from Detection import detector
 import cv2 as cv
 import os
 from autolab_core import ColorImage, DepthImage, RgbdImage, YamlConfig, CameraIntrinsics
 from gqcnn.grasping import RgbdImageState, FullyConvolutionalGraspingPolicyParallelJaw
 import time
+
+from Astra import Astra
+from Detection import detector
+from pixelinput.pixel_input import PixelInput
 
 # Initialize policy
 config = YamlConfig(os.path.join(os.path.dirname(os.path.realpath(__file__)), "cfg/examples/fc_gqcnn_pj.yaml"))
@@ -84,36 +86,7 @@ if __name__ == "__main__":
     # Setup camera
     camera = Astra.Astra()
     camera.start()
-
-    # Define mouse click event
-    posList = []
-    runflag = False
-
-    def onMouse(event, x, y, flags, param):
-        """
-        Mouse click event handler.
-
-        Records mouse click positions for object detection.
-
-        Parameters:
-            event: Type of mouse event.
-            x (int): x-coordinate of the mouse click.
-            y (int): y-coordinate of the mouse click.
-            flags: Flags indicating the state of the mouse buttons.
-            param: Additional parameters.
-        """
-        global posList, runflag
-        if event == cv.EVENT_LBUTTONDOWN:
-            posList.append((x, y))
-            runflag = True
-
-    # Assign mouse click to the windows
-    cv.namedWindow('color')
-    cv.setMouseCallback('color', onMouse)
-    cv.namedWindow('binary_image')
-    cv.setMouseCallback('binary_image', onMouse)
-    cv.namedWindow('depth')
-    cv.setMouseCallback('depth', onMouse)
+    pixel_input = PixelInput()
 
     # Set up object detector
     detector = detector.Detector("Detection/example_config.json")
@@ -123,12 +96,13 @@ if __name__ == "__main__":
         color, depth = camera.frames()
         cv.imshow("color", color)
         cv.imshow('depth', depth)
+
         contours, full_binary_image = detector.detect_objects(color, depth)
         cv.imshow("binary_image", full_binary_image._image_data())
-        if runflag:
-            runflag = False
-            containing_contour = detector.find_contour_near_point(contours, posList[0])
-            posList.pop(0)
+
+        x,y = pixel_input.get_pixel_coordinates()
+        if x is not None and y is not None:
+            containing_contour = detector.find_contour_near_point(contours,(x,y))
             if containing_contour is None:
                 print("No object found")
             else:
