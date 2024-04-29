@@ -4,8 +4,8 @@ import cv2
 import numpy as np
 from openni import openni2
 from openni import _openni2 as c_api
-from autolab_core import CameraIntrinsics
-
+import open3d as o3d
+from autolab_core import CameraIntrinsics, PointCloud
 class Astra():
     """
     Class representing the Astra camera sensor with configurable color and IR intrinsics.
@@ -50,12 +50,8 @@ class Astra():
             CameraIntrinsics: An object containing the camera intrinsics if the file exists, None otherwise.
         """
         if path and os.path.exists(path):
-            with open(path, 'r') as file:
-                data = json.load(file)
-                return CameraIntrinsics(
-                    cx=data["_cx"], cy=data["_cy"], fx=data["_fx"], fy=data["_fy"],
-                    skew=data["_skew"], width=data["_width"], height=data["_height"]
-                )
+            return CameraIntrinsics.load(path)
+
         else:
             return None
 
@@ -182,7 +178,6 @@ class Astra():
         Z = depth_array
         X = np.multiply(x_indices, Z) / self.color_intrinsics.fx
         Y = np.multiply(y_indices, Z) / self.color_intrinsics.fy
-
         return np.dstack((X, Y, Z))  # Stack along the third dimension
 
     def stop(self):
@@ -210,12 +205,19 @@ def depth_to_color(depth, max_depth):
     depth_normalized = np.uint8(depth_normalized)
     depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
     return depth_colored
+def visualize_point_cloud(point_cloud):
+    pcd = o3d.geometry.PointCloud()
+    reshaped_cloud = point_cloud.reshape(-1,3)
+    pcd.points = o3d.utility.Vector3dVector(reshaped_cloud)
+
+    o3d.visualization.draw_geometries([pcd])
 
 if __name__ == '__main__':
-    from astra_camera import Astra  # Ensure you have the correct import statement for your camera class
-
+    file_path = os.path.dirname(os.path.realpath(__file__))
+    color_intr_file = os.path.join(file_path,'Astra_Color.intr')
+    ir_intr_file = os.path.join('file_path,Astra_IR.intr')
     # Initialize the camera
-    camera = Astra()
+    camera = Astra(color_intr_path = color_intr_file, ir_intr_path = ir_intr_file)
     camera.start()
 
     try:
@@ -233,9 +235,11 @@ if __name__ == '__main__':
             # Display the color and depth images
             cv2.imshow('Color', color)
             cv2.imshow('Depth', depth_display)
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            key = cv2.waitKey(1) & 0xFF 
+            if key == ord('q'):
                 break
+            elif key ==ord('p'):
+                visualize_point_cloud(point_cloud)
     finally:
         camera.stop()
         cv2.destroyAllWindows()
