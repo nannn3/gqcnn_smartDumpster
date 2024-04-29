@@ -1,3 +1,4 @@
+import pdb
 import os
 import json
 import cv2
@@ -5,7 +6,7 @@ import numpy as np
 from openni import openni2
 from openni import _openni2 as c_api
 import open3d as o3d
-from autolab_core import CameraIntrinsics, PointCloud
+from autolab_core import CameraIntrinsics, PointCloud, DepthImage
 class Astra():
     """
     Class representing the Astra camera sensor with configurable color and IR intrinsics.
@@ -170,6 +171,7 @@ class Astra():
         Returns:
             numpy.ndarray: A 3D point cloud represented as a three-dimensional array (X, Y, Z coordinates).
         """
+        
         height, width = depth_array.shape
         x_indices = np.arange(width) - self.color_intrinsics.cx
         y_indices = np.arange(height) - self.color_intrinsics.cy
@@ -181,7 +183,24 @@ class Astra():
         data = np.dstack((X, Y, Z))  # Stack along the third dimension
         
         data = data.reshape(3,-1)
-        return PointCloud(data)
+        return PointCloud(data,frame = self.color_intrinsics.frame)
+        '''       
+        depth = DepthImage(depth_array,frame = self.color_intrinsics.frame)
+        return self.color_intrinsics.deproject(depth)
+        '''
+    def point_cloud_to_depth(self,point_cloud):
+        depth_image = np.zeros((480,640))
+        data = point_cloud.data
+        data = data.reshape(-1,3)
+        for point in data:
+            x,y,z = point
+            if z == 0:
+                continue
+            u = int((x * self.color_intrinsics.fx / z) + self.color_intrinsics.cx)
+            v = int((y * self.color_intrinsics.fy / z) +  self.color_intrinsics.cy)
+            if 0 <= u <= 640 and 0<=v <480:
+                depth_image[v,u]=z
+        return depth_image
 
     def stop(self):
         """
@@ -208,11 +227,11 @@ def depth_to_color(depth, max_depth):
     depth_normalized = np.uint8(depth_normalized)
     depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
     return depth_colored
+
 def visualize_point_cloud(point_cloud):
     pcd = o3d.geometry.PointCloud()
     data = point_cloud.data.reshape(-1,3)
     pcd.points = o3d.utility.Vector3dVector(data)
-
     o3d.visualization.draw_geometries([pcd])
 
 if __name__ == '__main__':
@@ -224,6 +243,8 @@ if __name__ == '__main__':
     # Initialize the camera
     camera = Astra(color_intr_path = color_intr_file, ir_intr_path = ir_intr_file)
     camera.start()
+    color_intr = camera.color_intrinsics
+
 
     try:
         while True:
@@ -245,12 +266,17 @@ if __name__ == '__main__':
                 break
             elif key ==ord('p'):
                 visualize_point_cloud(point_cloud)
+                np.savetxt('foo.csv',point_cloud.data.reshape(-1,3))
             
             elif key == ord('c'):
                 im = Image.fromarray(color)
                 image_path = os.path.join(file_path,'..','Calibration_Pics')
                 im.save(f'image{counter}.png')
-
+            
+            elif key == ord('v'):
+                depth_from_point = camera.point_cloud_to_depth(point_cloud)
+                cv2.imshow('depth from point cloud',depth_from_point)
+                cv2.waitKey(1)
 
     finally:
         camera.stop()
