@@ -178,7 +178,10 @@ class Astra():
         Z = depth_array
         X = np.multiply(x_indices, Z) / self.color_intrinsics.fx
         Y = np.multiply(y_indices, Z) / self.color_intrinsics.fy
-        return np.dstack((X, Y, Z))  # Stack along the third dimension
+        data = np.dstack((X, Y, Z))  # Stack along the third dimension
+        
+        data = data.reshape(3,-1)
+        return PointCloud(data)
 
     def stop(self):
         """
@@ -207,12 +210,14 @@ def depth_to_color(depth, max_depth):
     return depth_colored
 def visualize_point_cloud(point_cloud):
     pcd = o3d.geometry.PointCloud()
-    reshaped_cloud = point_cloud.reshape(-1,3)
-    pcd.points = o3d.utility.Vector3dVector(reshaped_cloud)
+    data = point_cloud.data.reshape(-1,3)
+    pcd.points = o3d.utility.Vector3dVector(data)
 
     o3d.visualization.draw_geometries([pcd])
 
 if __name__ == '__main__':
+    from PIL import Image
+    counter = 1
     file_path = os.path.dirname(os.path.realpath(__file__))
     color_intr_file = os.path.join(file_path,'Astra_Color.intr')
     ir_intr_file = os.path.join('file_path,Astra_IR.intr')
@@ -240,6 +245,13 @@ if __name__ == '__main__':
                 break
             elif key ==ord('p'):
                 visualize_point_cloud(point_cloud)
+            
+            elif key == ord('c'):
+                im = Image.fromarray(color)
+                image_path = os.path.join(file_path,'..','Calibration_Pics')
+                im.save(f'image{counter}.png')
+
+
     finally:
         camera.stop()
         cv2.destroyAllWindows()
