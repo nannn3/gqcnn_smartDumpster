@@ -204,7 +204,14 @@ class Astra():
             v = int((y * self.color_intrinsics.fy / z) +  self.color_intrinsics.cy)
             if 0 <= u < 640 and 0<=v <480:
                 depth_image[v,u]=abs(z) #If there's z<0, that just means its under the camera. This is expected
-        return depth_image
+        return np.flipud(depth_image)
+    def rotate_point_cloud(self,point_cloud,R):
+        '''Applies Rotation matrix R to a point cloud
+        returns new point cloud that has been rotated
+        '''
+        rotated =point_cloud.data.reshape(-1,3).dot(R)
+        point_cloud = PointCloud(rotated.reshape(3,-1),point_cloud.frame)
+        return point_cloud
 
     def stop(self):
         """
@@ -249,6 +256,11 @@ if __name__ == '__main__':
     camera.start()
     color_intr = camera.color_intrinsics
 
+    R = np.array([
+        [-.9998,.0095,-.0196],
+        [.0112,.9957,-.0924],
+        [.0187,-.0926,-.9955]
+        ])
 
     try:
         while True:
@@ -257,17 +269,10 @@ if __name__ == '__main__':
 
             # Convert the depth data to a point cloud (if needed for processing, not visualization)
             point_cloud = camera.depth_to_point_cloud(depth)
-
+            point_cloud = camera.rotate_point_cloud(point_cloud,R)
             # Convert depth to a visual format
             max_depth = np.max(depth) if np.max(depth) > 0 else 1.0  # Prevent division by zero
             depth_display = depth_to_color(depth, max_depth)
-            R = np.array([
-                [-.9998,.0095,-.0196],
-                [.0112,.9957,-.0924],
-                [.0187,-.0926,-.9955]
-                ])
-            rotated =point_cloud.data.reshape(-1,3).dot(R)
-            point_cloud = PointCloud(rotated.reshape(3,-1),point_cloud.frame)
             # Display the color and depth images
             cv2.imshow('Color', color)
             cv2.imshow('Depth', depth_display)
