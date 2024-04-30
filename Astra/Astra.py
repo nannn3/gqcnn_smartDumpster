@@ -159,6 +159,10 @@ class Astra():
         depth = depth.astype('float32')
         depth = cv2.medianBlur(depth, 3)
         depth *= (1.0 / 1000.0)  # Convert mm to meters
+        depth[depth >=1.25] = 0 #Filter out things further than 1.25 m
+        for row in range(407,460,1):
+            for col in range(46,107,1): #Dead space in testing env.
+                depth[row][col] = 0
         return depth
 
     def depth_to_point_cloud(self, depth_array):
@@ -198,8 +202,8 @@ class Astra():
                 continue
             u = int((x * self.color_intrinsics.fx / z) + self.color_intrinsics.cx)
             v = int((y * self.color_intrinsics.fy / z) +  self.color_intrinsics.cy)
-            if 0 <= u <= 640 and 0<=v <480:
-                depth_image[v,u]=z
+            if 0 <= u < 640 and 0<=v <480:
+                depth_image[v,u]=abs(z) #If there's z<0, that just means its under the camera. This is expected
         return depth_image
 
     def stop(self):
@@ -257,7 +261,13 @@ if __name__ == '__main__':
             # Convert depth to a visual format
             max_depth = np.max(depth) if np.max(depth) > 0 else 1.0  # Prevent division by zero
             depth_display = depth_to_color(depth, max_depth)
-
+            R = np.array([
+                [-.9998,.0095,-.0196],
+                [.0112,.9957,-.0924],
+                [.0187,-.0926,-.9955]
+                ])
+            rotated =point_cloud.data.reshape(-1,3).dot(R)
+            point_cloud = PointCloud(rotated.reshape(3,-1),point_cloud.frame)
             # Display the color and depth images
             cv2.imshow('Color', color)
             cv2.imshow('Depth', depth_display)
