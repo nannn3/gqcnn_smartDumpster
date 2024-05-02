@@ -7,6 +7,7 @@ from openni import openni2
 from openni import _openni2 as c_api
 import open3d as o3d
 from autolab_core import CameraIntrinsics, PointCloud, DepthImage
+
 class Astra():
     """
     Class representing the Astra camera sensor with configurable color and IR intrinsics.
@@ -193,7 +194,8 @@ class Astra():
         return self.color_intrinsics.deproject(depth)
         '''
     def point_cloud_to_depth(self,point_cloud):
-        depth_image = np.zeros((480,640))
+
+        depth_image = np.zeros((Astra.HEIGHT,Astra.WIDTH))
         data = point_cloud.data
         data = data.reshape(-1,3)
         for point in data:
@@ -202,9 +204,15 @@ class Astra():
                 continue
             u = int((x * self.color_intrinsics.fx / z) + self.color_intrinsics.cx)
             v = int((y * self.color_intrinsics.fy / z) +  self.color_intrinsics.cy)
-            if 0 <= u < 640 and 0<=v <480:
+            if 0 <= u < Astra.WIDTH and 0<=v < Astra.HEIGHT:
                 depth_image[v,u]=abs(z) #If there's z<0, that just means its under the camera. This is expected
-        return np.flipud(depth_image)
+
+        depth_image =  np.flipud(depth_image)
+        T = np.float32([[1,0,0],[0,1,-50]]) #Translation matrix to shift up by 50 px
+        translated_depth = cv2.warpAffine(depth_image,T,(Astra.WIDTH,Astra.HEIGHT))
+        translated_depth[-50:] = 0 #Replace bottom 50 rows with 0s
+        return translated_depth
+
     def rotate_point_cloud(self,point_cloud,R):
         '''Applies Rotation matrix R to a point cloud
         returns new point cloud that has been rotated
@@ -223,27 +231,34 @@ class Astra():
             self._running = False
             openni2.unload()
 
-def depth_to_color(depth, max_depth):
-    """
-    Normalize the depth image and convert to a colormap for visualization.
-    
-    Args:
-        depth (numpy.ndarray): The depth image where values represent depth in meters.
-        max_depth (float): The maximum depth value to normalize.
+    def depth_to_color(self,depth, max_depth):
+        """
+        Normalize the depth image and convert to a colormap for visualization.
+        
+        Args:
+            depth (numpy.ndarray): The depth image where values represent depth in meters.
+            max_depth (float): The maximum depth value to normalize.
 
-    Returns:
-        numpy.ndarray: A colorized depth image.
-    """
-    depth_normalized = cv2.normalize(depth, None, 0, 255, cv2.NORM_MINMAX)
-    depth_normalized = np.uint8(depth_normalized)
-    depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
-    return depth_colored
+        Returns:
+            numpy.ndarray: A colorized depth image.
+        """
+        depth_normalized = cv2.normalize(depth, None, 0, 255, cv2.NORM_MINMAX)
+        depth_normalized = np.uint8(depth_normalized)
+        depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
+        return depth_colored
 
 def visualize_point_cloud(point_cloud):
     pcd = o3d.geometry.PointCloud()
+    viewer = o3d.visualization.Visualizer()
+    viewer.create_window()
     data = point_cloud.data.reshape(-1,3)
     pcd.points = o3d.utility.Vector3dVector(data)
-    o3d.visualization.draw_geometries([pcd])
+    viewer.add_geometry(pcd)
+    opt = viewer.get_render_option()
+    opt.show_coordinate_frame = True
+    opt.background_color = np.asarray([0.5,0.5,0.5])
+    viewer.run()
+    #o3d.visualization.draw_geometries([pcd])
 
 if __name__ == '__main__':
     from PIL import Image
@@ -255,13 +270,17 @@ if __name__ == '__main__':
     camera = Astra(color_intr_path = color_intr_file, ir_intr_path = ir_intr_file)
     camera.start()
     color_intr = camera.color_intrinsics
-
     R = np.array([
         [-.9998,.0095,-.0196],
         [.0112,.9957,-.0924],
         [.0187,-.0926,-.9955]
         ])
-
+    '''
+    theta = -25 * (3.14/180)
+    R = np.array([[.998,0,0],
+                [0,np.cos(theta),-np.sin(theta)],
+                [0,np.sin(theta),np.cos(theta)]])
+    '''
     try:
         while True:
             # Get color and depth frames from the camera
@@ -269,7 +288,6 @@ if __name__ == '__main__':
 
             # Convert the depth data to a point cloud (if needed for processing, not visualization)
             point_cloud = camera.depth_to_point_cloud(depth)
-            point_cloud = camera.rotate_point_cloud(point_cloud,R)
             # Convert depth to a visual format
             max_depth = np.max(depth) if np.max(depth) > 0 else 1.0  # Prevent division by zero
             depth_display = depth_to_color(depth, max_depth)
@@ -282,15 +300,21 @@ if __name__ == '__main__':
             elif key ==ord('p'):
                 visualize_point_cloud(point_cloud)
                 np.savetxt('foo.csv',point_cloud.data.reshape(-1,3))
-            
+            elif key == ord('r'):
+                point_cloud = camera.rotate_point_cloud(point_cloud,R)
+                visualize_point_cloud(point_cloud)
+
             elif key == ord('c'):
                 im = Image.fromarray(color)
                 image_path = os.path.join(file_path,'..','Calibration_Pics')
                 im.save(f'image{counter}.png')
             
             elif key == ord('v'):
+
+                point_cloud = camera.rotate_point_cloud(point_cloud,R)
                 depth_from_point = camera.point_cloud_to_depth(point_cloud)
-                cv2.imshow('depth from point cloud',depth_from_point)
+                depth_from_point_display = depth_to_color(depth_from_point,max_depth)
+                cv2.imshow('depth from point cloud',depth_from_point_display)
                 cv2.waitKey(1)
 
     finally:

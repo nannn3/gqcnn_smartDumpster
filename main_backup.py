@@ -104,18 +104,20 @@ if __name__ == "__main__":
         [.0187,-.0926,-.9955]
         ])
     '''
-    theta = -25 * (3.14/180)
+    theta = -20 * (3.14/180)
     R = np.array([[.998,0,0],
                 [0,np.cos(theta),-np.sin(theta)],
                 [0,np.sin(theta),np.cos(theta)]])
     # Main event loop
     while 1:
         color, depth = camera.frames()
-        '''
+
         point_cloud = camera.depth_to_point_cloud(depth)
+        
         point_cloud = camera.rotate_point_cloud(point_cloud,R) 
         depth = camera.point_cloud_to_depth(point_cloud)
-        '''
+        print(help(camera))
+        
         max_depth = np.max(depth)
         depth_color = camera.depth_to_color(depth,max_depth)
         cv.imshow("color", color)
