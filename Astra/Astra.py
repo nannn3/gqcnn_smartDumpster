@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 from openni import openni2
 from openni import _openni2 as c_api
-import open3d as o3d
 from autolab_core import CameraIntrinsics, PointCloud, DepthImage
 
 #Default intr paths:
@@ -343,6 +342,8 @@ if __name__ == "__main__":
     """
     Initializes the camera, captures frames, and processes user input until termination.
     """
+    import open3d as o3d #Only used to visualize point cloud
+ 
     camera = Astra(color_intr_path,ir_intr_path)
     camera.start()
     counter = 1
