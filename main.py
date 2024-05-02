@@ -62,11 +62,11 @@ def draw_grasp(action, im):
     outfile.write(str(outdict)+"\n")
     
     
+    # This copy makes it work.
+    im = im.copy() # https://stackoverflow.com/questions/23830618/python-opencv-typeerror-layout-of-the-output-array-incompatible-with-cvmat
     
     
     # Draw rectangle
-    # This seemingly unessecary copy makes it work. If you don't copy, it won't. See SO link for more info
-    im = im.copy() # https://stackoverflow.com/questions/23830618/python-opencv-typeerror-layout-of-the-output-array-incompatible-with-cvmat
     im_rec = cv.rectangle(im, p1, p2, (255, 0, 0), 1)
     
     # Draw circles at p1 and p2
@@ -116,8 +116,7 @@ if __name__ == "__main__":
         point_cloud = camera.rotate_point_cloud(point_cloud,R) 
         depth = camera.point_cloud_to_depth(point_cloud)
         '''
-        max_depth = np.max(depth)
-        depth_color = camera.depth_to_color(depth,max_depth)
+        depth_color = camera.depth_to_color(depth)
         cv.imshow("color", color)
         cv.imshow('depth', depth_color)
         '''
@@ -146,10 +145,8 @@ if __name__ == "__main__":
                 print("No object found")
             else:
                 single_obj_bin_im = full_binary_image.contour_mask(containing_contour)
-                masked_depth = np.multiply(single_obj_bin_im._image_data()/255, depth)
-                cv.imshow('masked',masked_depth)
-                cv.waitKey(1)
-                print(masked_depth)
+                '''
+               masked_depth = np.multiply(single_obj_bin_im._image_data()/255, depth)
                 max_value_index =  np.unravel_index(np.argmax(masked_depth),masked_depth.shape)
                 
                 print(max_value_index,masked_depth[max_value_index[0],max_value_index[1]])
@@ -159,7 +156,7 @@ if __name__ == "__main__":
                     im = draw_grasp(action,color)
 
                     cv.imshow("Planned grasp",im)
-                '''
+            
 
         cv.waitKey(1)
 
