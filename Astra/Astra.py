@@ -5,8 +5,11 @@ import cv2
 import numpy as np
 from openni import openni2
 from openni import _openni2 as c_api
-import open3d as o3d
 from autolab_core import CameraIntrinsics, PointCloud, DepthImage
+
+#Default intr paths:
+color_intr_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'Astra_Color.intr')
+ir_intr_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'Astra_IR.intr')
 
 class Astra():
     """
@@ -20,7 +23,7 @@ class Astra():
     DEPTH_MIRRORING = True
     COLOR_MIRRORING = True 
 
-    def __init__(self, color_intr_path=None, ir_intr_path=None):
+    def __init__(self, color_intr_path=color_intr_path, ir_intr_path=ir_intr_path):
         """
         Initializes the Astra camera with paths to intrinsic files for the color and IR cameras.
 
@@ -55,7 +58,7 @@ class Astra():
             return CameraIntrinsics.load(path)
 
         else:
-            return None
+            raise ValueError("Cannot open intrinsics file:",path)
 
     @property
     def is_running(self):
@@ -160,9 +163,11 @@ class Astra():
         depth = depth.astype('float32')
         depth = cv2.medianBlur(depth, 3)
         depth *= (1.0 / 1000.0)  # Convert mm to meters
-        depth[depth >=1.25] = 0 #Filter out things further than 1.25 m
-        for row in range(407,460,1):
-            for col in range(46,107,1): #Dead space in testing env.
+        depth[depth >=1] = 0 #Filter out things further than 1.25 m
+        
+        #TODO Move this to its own function that takes a range of values to remove dead space in testing env
+        for row in range(380,460,1):
+            for col in range(46,257,1):
                 depth[row][col] = 0
         return depth
 
@@ -189,12 +194,9 @@ class Astra():
         
         data = data.reshape(3,-1)
         return PointCloud(data,frame = self.color_intrinsics.frame)
-        '''       
-        depth = DepthImage(depth_array,frame = self.color_intrinsics.frame)
-        return self.color_intrinsics.deproject(depth)
-        '''
+    
     def point_cloud_to_depth(self,point_cloud):
-
+        #TODO figure out why this doesn't work the way it should
         depth_image = np.zeros((Astra.HEIGHT,Astra.WIDTH))
         data = point_cloud.data
         data = data.reshape(-1,3)
@@ -206,21 +208,30 @@ class Astra():
             v = int((y * self.color_intrinsics.fy / z) +  self.color_intrinsics.cy)
             if 0 <= u < Astra.WIDTH and 0<=v < Astra.HEIGHT:
                 depth_image[v,u]=abs(z) #If there's z<0, that just means its under the camera. This is expected
+        #depth_image =  np.flipud(depth_image)
+        return depth_image
 
-        depth_image =  np.flipud(depth_image)
-        T = np.float32([[1,0,0],[0,1,-50]]) #Translation matrix to shift up by 50 px
-        translated_depth = cv2.warpAffine(depth_image,T,(Astra.WIDTH,Astra.HEIGHT))
-        translated_depth[-50:] = 0 #Replace bottom 50 rows with 0s
-        return translated_depth
-
-    def rotate_point_cloud(self,point_cloud,R):
-        '''Applies Rotation matrix R to a point cloud
-        returns new point cloud that has been rotated
+    def transform_image(self,image,T):
+        '''Applies 4x4 Translation matirx  matrix T to an image
         '''
-        rotated =point_cloud.data.reshape(-1,3).dot(R)
-        point_cloud = PointCloud(rotated.reshape(3,-1),point_cloud.frame)
-        return point_cloud
-
+        if T.shape != (4,4):
+            raise ValueError("T should be a 4x4 transformation matrix")
+        ans = []
+        for i in range(307200):
+            x = i//480;
+            y = i%480;
+            z = image[y][x]
+            ans.append([x,y,z,1])
+        data = np.array(ans)
+        ans = data.dot(T) 
+        ans = ans[:,2]
+        '''
+        print(ans)
+        print(np.max(ans))
+        '''
+        ans = ans.reshape(640,480).T
+        return ans
+   
     def stop(self):
         """
         Stops the depth and color streams and unloads the OpenNI environment.
@@ -231,7 +242,7 @@ class Astra():
             self._running = False
             openni2.unload()
 
-    def depth_to_color(self,depth, max_depth):
+    def depth_to_color(self,depth):
         """
         Normalize the depth image and convert to a colormap for visualization.
         
@@ -247,76 +258,194 @@ class Astra():
         depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
         return depth_colored
 
+'''
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		MODULE FUNCTIONS FOR TESTING
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'''
+
 def visualize_point_cloud(point_cloud):
+    """
+    Visualizes a 3D point cloud using Open3D.
+
+    Args:
+        point_cloud (PointCloud): The point cloud to visualize.
+    """
     pcd = o3d.geometry.PointCloud()
     viewer = o3d.visualization.Visualizer()
     viewer.create_window()
-    data = point_cloud.data.reshape(-1,3)
+    data = point_cloud.data.reshape(-1, 3)
     pcd.points = o3d.utility.Vector3dVector(data)
     viewer.add_geometry(pcd)
     opt = viewer.get_render_option()
     opt.show_coordinate_frame = True
-    opt.background_color = np.asarray([0.5,0.5,0.5])
+    opt.background_color = np.asarray([0.5, 0.5, 0.5])
     viewer.run()
-    #o3d.visualization.draw_geometries([pcd])
+    viewer.destroy_window()
 
-if __name__ == '__main__':
-    from PIL import Image
-    counter = 1
-    file_path = os.path.dirname(os.path.realpath(__file__))
-    color_intr_file = os.path.join(file_path,'Astra_Color.intr')
-    ir_intr_file = os.path.join('file_path,Astra_IR.intr')
-    # Initialize the camera
-    camera = Astra(color_intr_path = color_intr_file, ir_intr_path = ir_intr_file)
+def rotate_and_visualize_point_cloud(camera,depth, R):
+    """
+    Rotates and visualizes a point cloud generated from the depth data of the camera.
+
+    Args:
+        camera (Astra): The camera instance.
+        R (numpy.ndarray): Rotation matrix.
+    """
+    point_cloud = camera.depth_to_point_cloud(depth)
+    point_cloud = camera.rotate_point_cloud(point_cloud, R)
+    
+    visualize_point_cloud(point_cloud)
+
+def save_color_image(color, counter):
+    """
+    Saves the current color frame from the camera as an image file.
+
+    Args:
+        camera (Astra): The camera instance.
+        counter (int): Image counter used for naming the saved file.
+    """
+    im = Image.fromarray(color)
+    image_path = os.path.join(os.path.dirname(__file__), '..', 'Calibration_Pics')
+
+    im.save(os.path.join(image_path,f'image{counter}.png'))
+
+def view_depth_from_point_cloud(camera,depth, R):
+    """
+    Converts a rotated point cloud back to depth data and displays it.
+
+    Args:
+        camera (Astra): The camera instance.
+        R (numpy.ndarray): Rotation matrix.
+    """
+    point_cloud = camera.depth_to_point_cloud(depth)
+    point_cloud = camera.rotate_point_cloud(point_cloud, R)
+    depth_from_point = camera.point_cloud_to_depth(point_cloud)
+    depth_display = camera.depth_to_color(depth_from_point)
+    cv2.imshow('Depth from Point Cloud', depth_display)
+
+def process_user_input(camera, T, depth,color):
+    """
+    Processes user input to control camera operations and visualization.
+
+    Args:
+        camera (Astra): The camera instance.
+        R (numpy.ndarray): Rotation matrix.
+        counter (int): Image counter for naming saved images.
+
+    Returns:
+        bool: False if the user pressed 'q' to quit, True otherwise.
+    """
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('q'):
+        return False  # Signal to break the loop and exit
+    elif key == ord('p'):
+        point_cloud = camera.depth_to_point_cloud(depth)
+        visualize_point_cloud(point_cloud)
+    elif key == ord('r'):
+        transformed_depth = camera.transform_image(depth,T)
+        for i in range(307200):
+            x = i // 480
+            y = i % 480
+            z = transformed_depth[y][x]
+            if z < .4:
+                transformed_depth[y][x] = 0
+
+        print(transformed_depth)
+        min_depth = np.min(transformed_depth[np.nonzero(transformed_depth)])
+        i, j = np.where(np.isclose(transformed_depth, min_depth)) 
+        print("Pixel with highest depth value is:",(i,j))
+        depth = camera.depth_to_color(transformed_depth)
+        
+        cv2.imshow('Transformed image',depth)
+    elif key == ord('c'):
+        global counter
+        save_color_image(color, counter)
+
+        counter += 1
+    elif key == ord('v'):
+        view_depth_from_point_cloud(camera,depth, R)
+    return True
+
+def average_dif(vals):
+    '''
+    calculates the average distance between values
+    Args:
+        vals: list of floats
+    returns float: average of the differences
+    '''
+    n = len(vals)
+    total_dif = 0
+    count = 0
+    for i in range(n):
+        for j in range(i+1,n):
+            total_dif += abs(vals[i]-vals[j])
+            count += 1
+    return total_dif/count
+
+counter = 1
+if __name__ == "__main__":
+    """
+    Initializes the camera, captures frames, and processes user input until termination.
+    """
+    import open3d as o3d #Only used to visualize point cloud
+    from PIL import Image 
+    camera = Astra(color_intr_path,ir_intr_path)
     camera.start()
-    color_intr = camera.color_intrinsics
-    R = np.array([
-        [-.9998,.0095,-.0196],
-        [.0112,.9957,-.0924],
-        [.0187,-.0926,-.9955]
+    color,depth = camera.frames() 
+    
+    '''
+    # TEST to find best theta value
+    min_dif = np.inf
+    best_theta = 0;
+    for i in range(0,100,1):
+
+        theta_deg = - i*.001;
+        theta = theta_deg*(3.14159265/180)
+
+        T = np.array([
+            [1,0,0,0],
+            [0,np.cos(theta),-np.sin(theta),0],
+            [0,np.sin(theta),np.cos(theta),0],
+            [0,0,0,1]
+            ])
+        transformed_depth = camera.transform_image(depth,T)
+        
+        d1 = transformed_depth[89][435]
+        d2 = transformed_depth[250][215]
+        d3 = transformed_depth[100][222]
+        d4 = transformed_depth[240][466]
+        vals = [d1,d2,d3,d4]
+        dif = average_dif(vals)
+        if dif < min_dif:
+            best_theta = theta_deg
+            min_dif = dif
+    print('Best found theta = -',best_theta,'Best average dif:',min_dif)
+    ### end test
+    '''
+    theta = -0.043
+    theta *= (3.141592/180)
+
+    T = np.array([
+        [1,0,0,0],
+        [0,np.cos(theta),-np.sin(theta),0],
+        [0,np.sin(theta),np.cos(theta),0],
+        [0,0,0,1]
         ])
-    '''
-    theta = -25 * (3.14/180)
-    R = np.array([[.998,0,0],
-                [0,np.cos(theta),-np.sin(theta)],
-                [0,np.sin(theta),np.cos(theta)]])
-    '''
+
     try:
         while True:
-            # Get color and depth frames from the camera
             color, depth = camera.frames()
-
-            # Convert the depth data to a point cloud (if needed for processing, not visualization)
-            point_cloud = camera.depth_to_point_cloud(depth)
-            # Convert depth to a visual format
-            max_depth = np.max(depth) if np.max(depth) > 0 else 1.0  # Prevent division by zero
-            depth_display = depth_to_color(depth, max_depth)
-            # Display the color and depth images
+            # Crop to active work zone:
+            #color = color[20:250,115:500]
+            #depth = depth[20:250,115:500]
+            depth = camera.transform_image(depth,T)
+            depth_display = camera.depth_to_color(depth)
             cv2.imshow('Color', color)
             cv2.imshow('Depth', depth_display)
-            key = cv2.waitKey(1) & 0xFF 
-            if key == ord('q'):
+            if not process_user_input(camera, T,depth,color):
                 break
-            elif key ==ord('p'):
-                visualize_point_cloud(point_cloud)
-                np.savetxt('foo.csv',point_cloud.data.reshape(-1,3))
-            elif key == ord('r'):
-                point_cloud = camera.rotate_point_cloud(point_cloud,R)
-                visualize_point_cloud(point_cloud)
-
-            elif key == ord('c'):
-                im = Image.fromarray(color)
-                image_path = os.path.join(file_path,'..','Calibration_Pics')
-                im.save(f'image{counter}.png')
-            
-            elif key == ord('v'):
-
-                point_cloud = camera.rotate_point_cloud(point_cloud,R)
-                depth_from_point = camera.point_cloud_to_depth(point_cloud)
-                depth_from_point_display = depth_to_color(depth_from_point,max_depth)
-                cv2.imshow('depth from point cloud',depth_from_point_display)
-                cv2.waitKey(1)
-
     finally:
         camera.stop()
         cv2.destroyAllWindows()
+
+
