@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from openni import openni2
 from openni import _openni2 as c_api
-from autolab_core import CameraIntrinsics, PointCloud, DepthImage
+from autolab_core import CameraIntrinsics, DepthImage
 
 #Default intr paths:
 color_intr_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'Astra_Color.intr')
@@ -14,7 +14,7 @@ ir_intr_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'Astra_I
 class Astra():
     """
     Class representing the Astra camera sensor with configurable color and IR intrinsics.
-    Manages both color and depth streams and allows the generation of point clouds from depth data.
+    Manages both color and depth streams.
     """
 
     WIDTH = 640
@@ -225,36 +225,12 @@ class Astra():
 '''
 
 def visualize_point_cloud(point_cloud):
-    """
-    Visualizes a 3D point cloud using Open3D.
-
-    Args:
-        point_cloud (PointCloud): The point cloud to visualize.
-    """
-    pcd = o3d.geometry.PointCloud()
-    viewer = o3d.visualization.Visualizer()
-    viewer.create_window()
-    data = point_cloud.data.reshape(-1, 3)
-    pcd.points = o3d.utility.Vector3dVector(data)
-    viewer.add_geometry(pcd)
-    opt = viewer.get_render_option()
-    opt.show_coordinate_frame = True
-    opt.background_color = np.asarray([0.5, 0.5, 0.5])
-    viewer.run()
-    viewer.destroy_window()
+    #removed in git commit 3d992170d85b8dfdc344f5c46b14264929fc3dfd
+    raise NotImplemented('Removed in commit 3d992170d85b8dfdc344f5c46b14264929fc3dfd')
 
 def rotate_and_visualize_point_cloud(camera,depth, R):
-    """
-    Rotates and visualizes a point cloud generated from the depth data of the camera.
-
-    Args:
-        camera (Astra): The camera instance.
-        R (numpy.ndarray): Rotation matrix.
-    """
-    point_cloud = camera.depth_to_point_cloud(depth)
-    point_cloud = camera.rotate_point_cloud(point_cloud, R)
-    
-    visualize_point_cloud(point_cloud)
+    #removed in git commit 3d992170d85b8dfdc344f5c46b14264929fc3dfd
+    raise NotImplemented('Removed in commit 3d992170d85b8dfdc344f5c46b14264929fc3dfd')
 
 def save_color_image(color, counter):
     """
@@ -266,22 +242,11 @@ def save_color_image(color, counter):
     """
     im = Image.fromarray(color)
     image_path = os.path.join(os.path.dirname(__file__), '..', 'Calibration_Pics')
-
     im.save(os.path.join(image_path,f'image{counter}.png'))
 
 def view_depth_from_point_cloud(camera,depth, R):
-    """
-    Converts a rotated point cloud back to depth data and displays it.
-
-    Args:
-        camera (Astra): The camera instance.
-        R (numpy.ndarray): Rotation matrix.
-    """
-    point_cloud = camera.depth_to_point_cloud(depth)
-    point_cloud = camera.rotate_point_cloud(point_cloud, R)
-    depth_from_point = camera.point_cloud_to_depth(point_cloud)
-    depth_display = camera.depth_to_color(depth_from_point)
-    cv2.imshow('Depth from Point Cloud', depth_display)
+    #removed in commit 3d992170d85b8dfdc344f5c46b14264929fc3dfd
+    raise NotImplemented("Removed in commit 3d992170d85b8dfdc344f5c46b14264929fc3dfd")
 
 def process_user_input(camera, T, depth,color):
     """
@@ -339,7 +304,6 @@ if __name__ == "__main__":
     """
     Initializes the camera, captures frames, and processes user input until termination.
     """
-    import open3d as o3d #Only used to visualize point cloud
     from PIL import Image 
     camera = Astra(color_intr_path,ir_intr_path)
     camera.start()
