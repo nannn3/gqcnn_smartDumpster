@@ -196,7 +196,7 @@ class Astra():
 
         # Perform matrix multiplication
         # TODO double check that gives equal matrix to coords.T.dot(T)
-        transformed_coords = coords.dot(T.T)  # Transpose T to align for dot product
+        transformed_coords = coords.dot(T)  # Transpose T to align for dot product
 
         # Extract the z-coordinate after transformation
         transformed_image = transformed_coords[..., 2]
