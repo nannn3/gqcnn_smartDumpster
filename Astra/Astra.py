@@ -171,29 +171,40 @@ class Astra():
                 depth[row][col] = 0
         return depth
 
-    def transform_image(self,image,T):
-        '''Applies 4x4 Translation matirx  matrix T to an image
-        '''
-        if T.shape != (4,4):
-            raise ValueError("T should be a 4x4 transformation matrix")
-        ans = []
-        for i in range(307200):
-            x = i//480;
-            y = i%480;
-            z = image[y][x]
-            ans.append([x,y,z,1])
-        data = np.array(ans)
-        ans = data.dot(T) 
-        ans = ans[:,2]
-        '''
-        print(ans)
-        print(np.max(ans))
-        '''
-        ans = ans.reshape(640,480).T
-        return ans
-   
-    def stop(self):
+    def transform_image(self, image, T):
         """
+        Applies a 4x4 transformation matrix T to the depth image.
+        
+        Args:
+            image (numpy.ndarray): The depth image array to transform.
+            T (numpy.ndarray): A 4x4 transformation matrix.
+        
+        Returns:
+            numpy.ndarray: The transformed depth image array.
+        
+        Raises:
+            ValueError: If T is not a 4x4 matrix.
+        """
+        if T.shape != (4, 4):
+            raise ValueError("Transformation matrix T must be a 4x4 matrix")
+
+        # Generate grid of coordinates (x, y, z, 1)
+        coord_x, coord_y = np.meshgrid(np.arange(image.shape[1]), np.arange(image.shape[0]))
+        coord_z = image[coord_y, coord_x]
+        ones = np.ones_like(coord_z)
+        coords = np.stack([coord_x, coord_y, coord_z, ones], axis=-1)
+
+        # Perform matrix multiplication
+        # TODO double check that gives equal matrix to coords.T.dot(T)
+        transformed_coords = coords.dot(T.T)  # Transpose T to align for dot product
+
+        # Extract the z-coordinate after transformation
+        transformed_image = transformed_coords[..., 2]
+
+        return transformed_image.reshape(image.shape)
+       
+        def stop(self):
+            """
         Stops the depth and color streams and unloads the OpenNI environment.
         """
         if self._depth_stream and self._color_stream:
