@@ -195,8 +195,7 @@ class Astra():
         coords = np.stack([coord_x, coord_y, coord_z, ones], axis=-1)
 
         # Perform matrix multiplication
-        # TODO double check that gives equal matrix to coords.T.dot(T)
-        transformed_coords = coords.dot(T)  # Transpose T to align for dot product
+        transformed_coords = coords.dot(T)  
 
         # Extract the z-coordinate after transformation
         transformed_image = transformed_coords[..., 2]
