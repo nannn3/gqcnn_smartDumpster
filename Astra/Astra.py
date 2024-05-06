@@ -171,13 +171,14 @@ class Astra():
                 depth[row][col] = 0
         return depth
 
-    def transform_image(self, image, T):
+    def transform_image(self, image, T,threshold = .4):
         """
         Applies a 4x4 transformation matrix T to the depth image.
         
         Args:
             image (numpy.ndarray): The depth image array to transform.
             T (numpy.ndarray): A 4x4 transformation matrix.
+            threshold (float): The number below which all values are set to 0
         
         Returns:
             numpy.ndarray: The transformed depth image array.
@@ -199,18 +200,18 @@ class Astra():
 
         # Extract the z-coordinate after transformation
         transformed_image = transformed_coords[..., 2]
-
+        transformed_image[transformed_image < threshold] = 0
         return transformed_image.reshape(image.shape)
        
-        def stop(self):
+    def stop(self):
             """
-        Stops the depth and color streams and unloads the OpenNI environment.
-        """
-        if self._depth_stream and self._color_stream:
-            self._depth_stream.stop()
-            self._color_stream.stop()
-            self._running = False
-            openni2.unload()
+            Stops the depth and color streams and unloads the OpenNI environment.
+            """
+            if self._depth_stream and self._color_stream:
+                self._depth_stream.stop()
+                self._color_stream.stop()
+                self._running = False
+                openni2.unload()
 
     def depth_to_color(self,depth):
         """
@@ -365,6 +366,9 @@ if __name__ == "__main__":
             #color = color[20:250,115:500]
             #depth = depth[20:250,115:500]
             depth = camera.transform_image(depth,T)
+            max_depth = np.max(depth)
+            min_depth = np.min(depth)
+            print(max_depth,min_depth)
             depth_display = camera.depth_to_color(depth)
             cv2.imshow('Color', color)
             cv2.imshow('Depth', depth_display)
