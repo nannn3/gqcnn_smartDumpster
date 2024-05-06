@@ -171,46 +171,6 @@ class Astra():
                 depth[row][col] = 0
         return depth
 
-    def depth_to_point_cloud(self, depth_array):
-        """
-        Converts a depth array into a 3D point cloud based on the intrinsic parameters of the camera.
-
-        Args:
-            depth_array (numpy.ndarray): A depth image where each pixel represents depth in meters.
-
-        Returns:
-            numpy.ndarray: A 3D point cloud represented as a three-dimensional array (X, Y, Z coordinates).
-        """
-        
-        height, width = depth_array.shape
-        x_indices = np.arange(width) - self.color_intrinsics.cx
-        y_indices = np.arange(height) - self.color_intrinsics.cy
-        x_indices, y_indices = np.meshgrid(x_indices, y_indices)
-
-        Z = depth_array
-        X = np.multiply(x_indices, Z) / self.color_intrinsics.fx
-        Y = np.multiply(y_indices, Z) / self.color_intrinsics.fy
-        data = np.dstack((X, Y, Z))  # Stack along the third dimension
-        
-        data = data.reshape(3,-1)
-        return PointCloud(data,frame = self.color_intrinsics.frame)
-    
-    def point_cloud_to_depth(self,point_cloud):
-        #TODO figure out why this doesn't work the way it should
-        depth_image = np.zeros((Astra.HEIGHT,Astra.WIDTH))
-        data = point_cloud.data
-        data = data.reshape(-1,3)
-        for point in data:
-            x,y,z = point
-            if z == 0:
-                continue
-            u = int((x * self.color_intrinsics.fx / z) + self.color_intrinsics.cx)
-            v = int((y * self.color_intrinsics.fy / z) +  self.color_intrinsics.cy)
-            if 0 <= u < Astra.WIDTH and 0<=v < Astra.HEIGHT:
-                depth_image[v,u]=abs(z) #If there's z<0, that just means its under the camera. This is expected
-        #depth_image =  np.flipud(depth_image)
-        return depth_image
-
     def transform_image(self,image,T):
         '''Applies 4x4 Translation matirx  matrix T to an image
         '''
@@ -343,14 +303,6 @@ def process_user_input(camera, T, depth,color):
         visualize_point_cloud(point_cloud)
     elif key == ord('r'):
         transformed_depth = camera.transform_image(depth,T)
-        for i in range(307200):
-            x = i // 480
-            y = i % 480
-            z = transformed_depth[y][x]
-            if z < .4:
-                transformed_depth[y][x] = 0
-
-        print(transformed_depth)
         min_depth = np.min(transformed_depth[np.nonzero(transformed_depth)])
         i, j = np.where(np.isclose(transformed_depth, min_depth)) 
         print("Pixel with highest depth value is:",(i,j))
