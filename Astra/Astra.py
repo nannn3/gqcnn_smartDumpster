@@ -202,8 +202,8 @@ class Astra():
 
         return transformed_image.reshape(image.shape)
        
-        def stop(self):
-            """
+    def stop(self):
+        """
         Stops the depth and color streams and unloads the OpenNI environment.
         """
         if self._depth_stream and self._color_stream:
