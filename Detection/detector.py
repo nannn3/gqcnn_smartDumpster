@@ -192,24 +192,30 @@ class Detector:
         """
         self.cfg = {}
 
-    def find_contour_near_point(self,contours,pt):
-        '''
-            Picks out the contour containing the point pt
-            Args:
-                contours: list of cv2 contour objects
-                pt : (int x , int y)
-            Returns:
-                contour: cv2 contour object containing pt or None if not found
-        '''
-        x_click,y_click = pt
-        for obj in contours:
-            box = obj.bounding_box
-            y,x = box.center
-            width = box.width
-            height = box.height
-            if (x_click >= x - width/2 and x_click <= x + width/2) and (y_click >= y - height/2 and y_click <= y+ height/2):
-                return obj
-        return None
+    def find_contour_near_point(self, contours, pt):
+        """
+        Finds the nearest contour to the given point.
+
+        Args:
+            contours (list of np.ndarray): List of cv2 contour objects.
+            pt (tuple of int): Point (x, y) for which the nearest contour is to be found.
+
+        Returns:
+            np.ndarray: The nearest contour to the point or None if there are no contours.
+        """
+        min_distance = float('inf')
+        nearest_contour = None
+
+        for contour in contours:
+            # Compute distance from the point to the contour
+            distance = cv.pointPolygonTest(contour, pt, True)
+
+            # Check if this contour is closer than what we have seen so far
+            if distance < min_distance:
+                min_distance = distance
+                nearest_contour = contour
+
+        return nearest_contour
 
 if __name__ == "__main__":
     from Astra import Astra
