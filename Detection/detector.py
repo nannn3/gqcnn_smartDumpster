@@ -53,7 +53,8 @@ class Detector:
         
         contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
         tops_of_objects = self.find_object_tops(depth_im, contours)
-
+        tops_of_objects = BinaryImage(tops_of_objects)
+        contours = tops_of_objects.find_contours(min_area = self.get_cfg('min_contour_area'), max_area = self.get_cfg('max_contour_area'))
         return contours,tops_of_objects
 
     def find_object_tops(self, depth_im, contours, threshold=.1):
