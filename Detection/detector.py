@@ -1,6 +1,6 @@
 import scipy.ndimage.morphology as snm
 import numpy as np
-from autolab_core import ColorImage, DepthImage, BinaryImage
+from autolab_core import ColorImage, DepthImage, BinaryImage, Contour
 import cv2 as cv
 import json
 
@@ -51,8 +51,8 @@ class Detector:
         binary_im_filtered = self.filter_im(filtered_depth_im, self.get_cfg('morphological_filter_size'))        
         
         contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
-        tops_of_objects = self.find_object_tops(depth, contours)
-        tops_of_objects = BinaryImage(tops_of_objects)
+        #tops_of_objects = self.find_object_tops(depth, contours)
+        #tops_of_objects = BinaryImage(tops_of_objects)
         #contours = tops_of_objects.find_contours(min_area = self.get_cfg('min_contour_area'), max_area = self.get_cfg('max_contour_area'))
         #return contours,tops_of_objects
         return contours,binary_im_filtered
@@ -207,8 +207,10 @@ class Detector:
         """
         min_distance = float('inf')
         nearest_contour = None
-
+        x_click,y_click = pt
         for contour in contours:
+            '''
+            contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
             # Compute distance from the point to the contour
             distance = cv.pointPolygonTest(contour, pt, True)
 
@@ -216,8 +218,14 @@ class Detector:
             if distance < min_distance:
                 min_distance = distance
                 nearest_contour = contour
-
-        return nearest_contour
+            '''
+            box = contour.bounding_box
+            y,x = box.center
+            width = box.width
+            height = box.height
+            if(x_click >= x - width /2 and x_click <= x+width/2) and (y_click >= y-height/2 and y_click <= y+height/2):
+                return contour
+        return None
 
 if __name__ == "__main__":
     from Astra import Astra
