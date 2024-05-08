@@ -104,13 +104,15 @@ if __name__ == "__main__":
         [.0187,-.0926,-.9955]
         ])
     '''
-    theta = -25 * (3.14/180)
-    R = np.array([[.998,0,0],
-                [0,np.cos(theta),-np.sin(theta)],
-                [0,np.sin(theta),np.cos(theta)]])
+    theta = -.043 * (3.14/180)
+    R = np.array([[1,0,0,0],
+                [0,np.cos(theta),-np.sin(theta),0],
+                [0,np.sin(theta),np.cos(theta),0],
+                [0,0,0,1]])
     # Main event loop
     while 1:
         color, depth = camera.frames()
+        depth = camera.transform_image(depth,R)
         '''
         point_cloud = camera.depth_to_point_cloud(depth)
         point_cloud = camera.rotate_point_cloud(point_cloud,R) 
