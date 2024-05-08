@@ -52,16 +52,47 @@ class Detector:
         binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))        
         
         contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
-        '''
-        output = np.zeros_like(filtered_depth_im._image_data())
+        tops_of_objects = self.find_object_tops(depth_im, contours)
+
+        return contours,tops_of_objects
+
+    def find_object_tops(self, depth_im, contours, threshold=.1):
+        """
+        Generates a binary image highlighting the tops of objects in a depth image based on given contours and a depth threshold.
+        
+        Parameters:
+        - depth_image (numpy.ndarray): A 480x640 numpy array containing depth values where each element represents the depth away from the camera at that pixel.
+        - contours (list of numpy.ndarray): A list of contours where each contour is represented as an array of points.
+        - depth_threshold (float): A threshold specifying the maximum distance above the minimum depth within each contour to still be considered as the top of the object.
+        
+        Returns:
+        - numpy.ndarray: A binary image of the same shape as `depth_image`, where the tops of objects are marked with 255 and other areas are 0.
+        
+        The function works by iterating over each provided contour, creating a mask for that contour, and identifying the minimum depth within the masked region. It then marks all areas within the defined depth threshold from the minimum depth as the tops of objects. The resulting binary image is a combination of these markings for all contours.
+        """
+        
+        # Prepare the final binary image
+        final_bin_im = np.zeros_like(depth_image, dtype=np.uint8)
+        
+        # Process each contour
         for contour in contours:
-            mask = np.zeros_like(filtered_depth_im._image_data())
-            cv.drawContours(mask,[contour],-1,(1),thickness=cv.FILLED)
-            masked_points = filtered_depth_im * mask
-            max_depth = np.max(masked_points)
-            output[masked_points == max_depth] = filtered_depth_im[masked_points == max_depth]
-        '''
-        return contours,binary_im_filtered        
+            mask = np.zeros_like(depth_image, dtype=np.uint8)
+            cv.drawContours(mask, [contour], -1, 255, thickness=cv.FILLED)
+            
+            # Applying the mask to the depth image to get the ROI
+            roi = np.where(mask == 255, depth_image, np.max(depth_image) + 1)
+            
+            # Finding the minimum depth in the ROI
+            min_depth = np.min(roi)
+            
+            # Creating a mask for areas close to the minimum depth
+            close_to_min = np.where((roi >= min_depth) & (roi <= min_depth + depth_threshold), 255, 0)
+            
+            # Combine the current mask with the final binary image
+            final_bin_im = cv.bitwise_or(final_bin_im, close_to_min.astype(np.uint8))
+        
+        return final_bin_im
+
     def create_foreground_mask(self,color_im):
         """
         Create a foreground mask from a color image.
