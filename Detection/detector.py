@@ -1,4 +1,3 @@
-
 import scipy.ndimage.morphology as snm
 import numpy as np
 from autolab_core import ColorImage, DepthImage, BinaryImage
@@ -48,16 +47,16 @@ class Detector:
         depth_im = DepthImage(depth)        
         filtered_depth_im = self.create_threshold_im(depth_im)
         foreground_mask = self.create_foreground_mask(color_im)
-        overlayed_bin_ims = foreground_mask.pixelwise_or(filtered_depth_im)
-        binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))        
+        #overlayed_bin_ims = foreground_mask.pixelwise_or(filtered_depth_im)
+        binary_im_filtered = self.filter_im(filtered_depth_im, self.get_cfg('morphological_filter_size'))        
         
         contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
-        tops_of_objects = self.find_object_tops(depth_im, contours)
+        tops_of_objects = self.find_object_tops(depth, contours)
         tops_of_objects = BinaryImage(tops_of_objects)
-        contours = tops_of_objects.find_contours(min_area = self.get_cfg('min_contour_area'), max_area = self.get_cfg('max_contour_area'))
-        return contours,tops_of_objects
-
-    def find_object_tops(self, depth_im, contours, threshold=.1):
+        #contours = tops_of_objects.find_contours(min_area = self.get_cfg('min_contour_area'), max_area = self.get_cfg('max_contour_area'))
+        #return contours,tops_of_objects
+        return contours,binary_im_filtered
+    def find_object_tops(self, depth_image, contours, threshold=.1):
         """
         Generates a binary image highlighting the tops of objects in a depth image based on given contours and a depth threshold.
         
@@ -74,9 +73,10 @@ class Detector:
         
         # Prepare the final binary image
         final_bin_im = np.zeros_like(depth_image, dtype=np.uint8)
-        
         # Process each contour
+        print(len(contours))
         for contour in contours:
+            contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
             mask = np.zeros_like(depth_image, dtype=np.uint8)
             cv.drawContours(mask, [contour], -1, 255, thickness=cv.FILLED)
             
@@ -87,8 +87,10 @@ class Detector:
             min_depth = np.min(roi)
             
             # Creating a mask for areas close to the minimum depth
-            close_to_min = np.where((roi >= min_depth) & (roi <= min_depth + depth_threshold), 255, 0)
-            
+            close_to_min = np.where((roi >= min_depth) & (roi <= min_depth + threshold), 255, 0)
+            foo = BinaryImage(close_to_min.astype(np.uint8))
+            cv.imshow('tops',foo._image_data())
+            cv.waitKey(100)
             # Combine the current mask with the final binary image
             final_bin_im = cv.bitwise_or(final_bin_im, close_to_min.astype(np.uint8))
         
@@ -249,9 +251,18 @@ if __name__ == "__main__":
     # camera initialization
     camera = Astra()
     camera.start()
-    
+    theta = -0.043
+    theta *= (3.141592/180)
+
+    T = np.array([
+        [1,0,0,0],
+        [0,np.cos(theta),-np.sin(theta),0],
+        [0,np.sin(theta),np.cos(theta),0],
+        [0,0,0,1]
+        ])
     while True:
         color, depth = camera.frames()
+        depth = camera.transform_image(depth,T)
         depth_im = DepthImage(depth)
 
         contours,bin_im  = detector.detect_objects(color, depth)
