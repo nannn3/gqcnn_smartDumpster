@@ -1,1 +1,1 @@
-{"depth_threshold_min": 0.4, "depth_threshold_max":1.1, "foreground_mask_threshold": 112, "morphological_filter_size": 18, "min_contour_area": 50.0, "max_contour_area":75000 }
+{"depth_threshold_min": 0.4, "depth_threshold_max":1.02, "foreground_mask_threshold": 100, "morphological_filter_size": 18, "min_contour_area": 50.0, "max_contour_area":75000 }

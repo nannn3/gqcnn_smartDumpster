@@ -1,3 +1,4 @@
+
 import scipy.ndimage.morphology as snm
 import numpy as np
 from autolab_core import ColorImage, DepthImage, BinaryImage
@@ -47,11 +48,20 @@ class Detector:
         depth_im = DepthImage(depth)        
         filtered_depth_im = self.create_threshold_im(depth_im)
         foreground_mask = self.create_foreground_mask(color_im)
-        #overlayed_bin_ims = foreground_mask.mask_binary(filtered_depth_im)
-        binary_im_filtered = self.filter_im(foreground_mask, self.get_cfg('morphological_filter_size'))        
-        contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
-        return contours,binary_im_filtered
+        overlayed_bin_ims = foreground_mask.pixelwise_or(filtered_depth_im)
+        binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))        
         
+        contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
+        '''
+        output = np.zeros_like(filtered_depth_im._image_data())
+        for contour in contours:
+            mask = np.zeros_like(filtered_depth_im._image_data())
+            cv.drawContours(mask,[contour],-1,(1),thickness=cv.FILLED)
+            masked_points = filtered_depth_im * mask
+            max_depth = np.max(masked_points)
+            output[masked_points == max_depth] = filtered_depth_im[masked_points == max_depth]
+        '''
+        return contours,binary_im_filtered        
     def create_foreground_mask(self,color_im):
         """
         Create a foreground mask from a color image.
@@ -63,7 +73,7 @@ class Detector:
             BinaryImage: The foreground mask.
         """
         mask_threshold = self.get_cfg('foreground_mask_threshold')
-        foreground_mask = color_im.foreground_mask(mask_threshold,ignore_black = True )
+        foreground_mask = color_im.foreground_mask(mask_threshold,bgmodel=[140,101,140])
         return foreground_mask
         
     def create_threshold_im(self,depth_im):
@@ -85,8 +95,8 @@ class Detector:
             raise ValueError("depth_threshold_min must be smaller than depth_threshold_max")
         binary_im = depth_im.threshold(depth_min,depth_max)
         depth_mask = binary_im.invalid_pixel_mask() # This creates a binary image where things outside the depth thresholds are white, so it needs to be inverted 
-        #right_depth_mask = depth_mask.inverse()
-        return depth_mask
+        right_depth_mask = depth_mask.inverse()
+        return right_depth_mask
         
     def filter_im(self, im, w):
         """
@@ -199,20 +209,19 @@ if __name__ == "__main__":
     detector = Detector("example_config.json")
 
     # camera initialization
-    camera = Astra.Astra()
+    camera = Astra()
     camera.start()
     
     while True:
         color, depth = camera.frames()
         depth_im = DepthImage(depth)
-        threshold_mask = detector.create_threshold_im(depth_im)
-        cv.imshow('threshold',threshold_mask._image_data())
+
+        contours,bin_im  = detector.detect_objects(color, depth)
+        cv.imshow('all_obj',bin_im._image_data())
         cv.imshow("color", color)
         if runflag:
             # Get segmask of object nearest mouseclick
             runflag = False
-            contours,bin_im  = detector.detect_objects(color, depth)
-            cv.imshow('all_obj',bin_im._image_data())
             cv.waitKey(1)
                   
             containing_contour = detector.find_contour_near_point(contours,posList[0])
