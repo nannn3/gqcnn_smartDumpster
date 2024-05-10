@@ -28,7 +28,7 @@ def invokeDexNet(color, depth, segmask):
         action: Grasping action.
     """
     color_im = ColorImage(color)
-    depth_im = DepthImage(depth).inpaint(.50)
+    depth_im = DepthImage(depth).inpaint(2)
     cv.imshow('inpainted',depth_im._image_data())
     cv.waitKey(1)
     rgbd_im = RgbdImage.from_color_and_depth(color_im, depth_im)
@@ -42,7 +42,7 @@ def invokeDexNet(color, depth, segmask):
     return action
 
 
-def draw_grasp(action, im):
+def draw_grasp(action, im,depth_at_x_y=None):
     '''Draws a rectangle and circles on the image
         Params:
             action: obj: action
@@ -52,7 +52,10 @@ def draw_grasp(action, im):
     foo = action.grasp.feature_vec
     p1 = (int(foo[0]), int(foo[1]))
     p2 = (int(foo[2]), int(foo[3]))
-    depth = foo[4]
+    if depth_at_x_y:
+        depth = depth_at_x_y
+    else:
+        depth = foo[4]
     
     # Write to output file
     centroidX=action.grasp.center.vector[0]
@@ -104,7 +107,7 @@ if __name__ == "__main__":
         [.0187,-.0926,-.9955]
         ])
     '''
-    theta = -.043 * (3.14/180)
+    theta = -.053 * (3.14/180)
     R = np.array([[1,0,0,0],
                 [0,np.cos(theta),-np.sin(theta),0],
                 [0,np.sin(theta),np.cos(theta),0],
@@ -155,7 +158,7 @@ if __name__ == "__main__":
                 '''
                 action = invokeDexNet(color, depth, single_obj_bin_im)
                 if policy_config["vis"]["final_grasp"]:
-                    im = draw_grasp(action,color)
+                    im = draw_grasp(action,color)#,depth_at_x_y)
 
                     cv.imshow("Planned grasp",im)
             
