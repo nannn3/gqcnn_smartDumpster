@@ -223,11 +223,12 @@ class Detector:
             '''
             box = contour.bounding_box
             y,x = box.center
-            width = box.width
-            height = box.height
-            if(x_click >= x - width /2 and x_click <= x+width/2) and (y_click >= y-height/2 and y_click <= y+height/2):
-                return contour
-        return None
+            dist = np.sqrt((x_click-x)**2 + (y_click - y)**2)
+            if dist < min_distance:
+                min_distance = dist
+                nearest_contour = contour
+        
+        return nearest_contour
 
 if __name__ == "__main__":
     from Astra import Astra
@@ -289,7 +290,7 @@ if __name__ == "__main__":
             if containing_contour is None:
                 print("no contour found")
             else:
-                single_obj_bin_im = bin_im.contour_mask(containing_contour)
+                single_obj_bin_im = tops.contour_mask(containing_contour)
                 cv.imshow('result',single_obj_bin_im._image_data())
             
              
