@@ -55,10 +55,10 @@ class Detector:
         tops_of_objects = self.find_object_tops(depth, contours)
         tops_of_objects = BinaryImage(tops_of_objects)
         contours = tops_of_objects.find_contours(min_area = self.get_cfg('min_contour_area'), max_area = self.get_cfg('max_contour_area'))
-        return contours,tops_of_objects,binary_im_filtered
+        return contours,tops_of_objects
         #return contours,binary_im_filtered
    
-    def find_object_tops(self, depth_image, contours, threshold=.1):
+    def find_object_tops(self, depth_image, contours, threshold=.01):
         """
         Generates a binary image highlighting the tops of objects in a depth image based on given contours and a depth threshold.
         
@@ -86,18 +86,13 @@ class Detector:
                 contour[i,0][1] = y
             mask = np.zeros_like(depth_image, dtype=np.uint8)
             cv.drawContours(mask, [contour], -1, 255, thickness=cv.FILLED)
-            
             # Applying the mask to the depth image to get the ROI
             roi = np.where(mask == 255, depth_image, np.max(depth_image) + 1)
-            
-            # Finding the minimum depth in the ROI
+            roi[roi == 0] = np.inf #swap 0's with infinity to get a better min depth
             min_depth = np.min(roi)
-            
             # Creating a mask for areas close to the minimum depth
             close_to_min = np.where((roi >= min_depth - threshold) & (roi <= min_depth + threshold), 255, 0)
             foo = BinaryImage(close_to_min.astype(np.uint8))
-            cv.imshow('tops',foo._image_data())
-            cv.waitKey(100)
             # Combine the current mask with the final binary image
             final_bin_im = cv.bitwise_or(final_bin_im, close_to_min.astype(np.uint8))
         
@@ -280,8 +275,8 @@ if __name__ == "__main__":
         depth = camera.transform_image(depth,T)
         depth_im = DepthImage(depth)
 
-        contours,tops,bin_im  = detector.detect_objects(color, depth)
-        cv.imshow('all_obj',bin_im._image_data())
+        contours,tops = detector.detect_objects(color, depth)
+        #cv.imshow('all_obj',bin_im._image_data())
         cv.imshow('tops',tops._image_data())
         cv.imshow("color", color)
         if runflag:
