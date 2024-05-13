@@ -78,12 +78,7 @@ class Detector:
         # Process each contour
         for contour in contours:
             contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
-            for i in range(contour.shape[0]):
-                # for some reason, the x and y have been swapped. 
-                y = contour[i,0][0] 
-                x = contour[i,0][1]
-                contour[i,0][0] = x
-                contour[i,0][1] = y
+            contour = contour[:, [1, 0]] #Swap x, y coordinates
             mask = np.zeros_like(depth_image, dtype=np.uint8)
             cv.drawContours(mask, [contour], -1, 255, thickness=cv.FILLED)
             # Applying the mask to the depth image to get the ROI
