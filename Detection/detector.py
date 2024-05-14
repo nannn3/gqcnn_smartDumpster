@@ -16,28 +16,74 @@ class Detector:
         self.load_cfg(config_file)
         #It might be a problem that tall orange and tall white are basically the same color, however the Y value of tall white will always be greater than that of tall orange
         self.cubes = {
-                'Tall_Green':{'color':(88,90,89)},
-                'Short_Yellow':{'color':(180,245,250)},
-                'Tall_Orange':{'color':(252,250,248)},
-                'Short_White':{'color':(252,255,248)},
-                'Short_Green':{'color':(144,205,158)},
-                'Tall_Yellow':{'color':(205,247,249)},
-                'Short_Orange':{'color':(146,196,246)},
+                'Tall_Green':{'color':(110,175,110)},
+                'Short_Yellow':{'color':(200,250,250)},
+                'Tall_Orange':{'color':(132,195,245)},
+                'Short_White':{'color':(252,250,248)},
+                'Short_Green':{'color':(165,235,165)},
+                'Tall_Yellow':{'color':(235,247,249)},
+                'Short_Orange':{'color':(157,225,246)},
                 'Tall_White':{'color':(253,253,253)}
                 }
+    def compare_color_to_cubes(self,color):
+        
+        for cube_name,cube_props in self.cubes.items():
+            if self.is_same_color(color,cube_props['color']):
+                return cube_name
+        return None
+    
+    def get_color_from_contour(self,color_image,contour):
+        mask = np.zeros_like(color_image[:,:,2],dtype=np.uint8)
+        contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
+        contour = contour[:, 0, ::-1] #Swap x, y coordinates
+        mask = cv.drawContours(mask,[contour],-1,255,cv.FILLED)
+        mean_color = cv.mean(color_image,mask=mask)
+        mean_color = mean_color[:3]
+        int_mean_color = tuple(int(x) for x in mean_color)
+        return int_mean_color
+        
+    def check_color_order(self,color_image,depth,points):
+        '''
+        checks the order of the colors
+        args:
+            color_image: np.ndarray of the color
+            points: list of points
+        '''
+        detected_colors = []
+        contours = self.detect_objects(color_image,depth)[0]
+        for pt in points:
+            contour = self.find_contour_near_point(contours,pt)
+            color = self.get_color_from_contour(color_image,contour)
+            detected_colors.append(color)
+         
+        cubes =[ 
+                'Tall_Green',
+                'Short_Yellow',
+                'Tall_Orange',
+                'Short_White',
+                'Short_Green',
+                'Tall_Yellow',
+                'Short_Orange',
+                'Tall_White'
+                ]
+        for key,colors in zip(cubes,detected_colors):
+            if not self.is_same_color(self.cubes[key]['color'],colors):
+                print('Not same color',key,'expected: ',self.cubes[key]['color'], 'got : ',colors)
+
     def is_same_color(self,recorded_color,known_color):
         '''
         compares two tuples and checks if their colors are within a tolerance level
         '''
+        recorded_color = recorded_color[:3]
         if len(recorded_color) != len(known_color):
             raise ValueError("recorded color and known color should be the same size")
 
         tolerance = self.get_cfg('color_tolerance')
         for c1,c2 in zip(recorded_color,known_color):
-            if abs(c1-c2) < tolerance:
+            if abs(c1-c2) > tolerance:
                 return False
-
         return True
+
     def get_cfg(self, key):
         """
         Get a configuration value.
@@ -298,7 +344,12 @@ if __name__ == "__main__":
         [-np.sin(phi),np.sin(theta)*np.cos(phi),np.cos(theta)*np.cos(phi),0],
         [0,0,0,1]
         ])
-    cal = True
+    # Find mean color of calibration cubes:
+    pts =[(276,77),(332,92),(403,72),(455,95),(263,340),(351,330),(427,340),(506,347)]
+    for _ in range(100):
+        color,depth = camera.frames()
+        depth = camera.transform_image(depth,T)
+    print(detector.check_color_order(color,depth,pts))
     while True:
         color, depth = camera.frames()
         depth = camera.transform_image(depth,T)
@@ -309,27 +360,13 @@ if __name__ == "__main__":
         cv.imshow('depth_mask',depth_mask._image_data())
         cv.imshow('tops',tops._image_data())
         cv.imshow("color", color)
-        # Find mean color of calibration cubes:
-        pts =[(276,77),(332,92),(403,72),(455,95),(263,340),(351,330),(427,340),(506,347)]
-        for pt in pts:
-            if not cal:
-                break
-            contour = detector.find_contour_near_point(contours,pt)
-            contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
-            contour = contour[:, 0, ::-1] #Swap x, y coordinates
-            mask = np.zeros_like(depth,dtype=np.uint8)
-            mask = cv.drawContours(mask,[contour],-1,255,cv.FILLED)
-            cv.imshow('mask',mask)
-            mean_color = cv.mean(color,mask=mask)
-
-            print("Color at point",pt,"is :",mean_color)
-        cal = False
         if runflag:
             # Get segmask of object nearest mouseclick
             runflag = False
             cv.waitKey(1)
                   
             containing_contour = detector.find_contour_near_point(contours,posList[0])
+            print(detector.get_color_from_contour(color,containing_contour))
             posList.pop(0)
             if containing_contour is None:
                 print("no contour found")
