@@ -48,15 +48,15 @@ class Detector:
         depth_im = DepthImage(depth)        
         filtered_depth_im = self.create_threshold_im(depth_im)
         foreground_mask = self.create_foreground_mask(color_im)
-        #overlayed_bin_ims = foreground_mask.pixelwise_or(filtered_depth_im)
-        binary_im_filtered = self.filter_im(filtered_depth_im, self.get_cfg('morphological_filter_size'))        
+        overlayed_bin_ims = foreground_mask.pixelwise_or(filtered_depth_im)
+        binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))        
         
         contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
-        tops_of_objects = self.find_object_tops(depth, contours)
-        tops_of_objects = BinaryImage(tops_of_objects)
-        contours = tops_of_objects.find_contours(min_area = self.get_cfg('min_contour_area'), max_area = self.get_cfg('max_contour_area'))
-        return contours,tops_of_objects
-        #return contours,binary_im_filtered
+        #tops_of_objects = self.find_object_tops(depth, contours)
+        #tops_of_objects = BinaryImage(tops_of_objects)
+        #contours = tops_of_objects.find_contours(min_area = self.get_cfg('min_contour_area'), max_area = self.get_cfg('max_contour_area'))
+        #return contours,tops_of_objects
+        return contours,binary_im_filtered,foreground_mask,filtered_depth_im
    
     def find_object_tops(self, depth_image, contours, threshold=.01):
         """
@@ -78,7 +78,7 @@ class Detector:
         # Process each contour
         for contour in contours:
             contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
-            contour = contour[:, [1, 0]] #Swap x, y coordinates
+            contour = contour[:, 0, ::-1] #Swap x, y coordinates
             mask = np.zeros_like(depth_image, dtype=np.uint8)
             cv.drawContours(mask, [contour], -1, 255, thickness=cv.FILLED)
             # Applying the mask to the depth image to get the ROI
@@ -104,7 +104,7 @@ class Detector:
             BinaryImage: The foreground mask.
         """
         mask_threshold = self.get_cfg('foreground_mask_threshold')
-        foreground_mask = color_im.foreground_mask(mask_threshold,bgmodel=[140,101,140])
+        foreground_mask = color_im.foreground_mask(mask_threshold, bgmodel=[5,5,5])
         return foreground_mask
         
     def create_threshold_im(self,depth_im):
@@ -257,24 +257,51 @@ if __name__ == "__main__":
     # camera initialization
     camera = Astra()
     camera.start()
-    theta = -0.053
-    theta *= (3.141592/180)
-
+    theta = -0.0471
+    theta *= (np.pi/180)
+    phi = -.0047 *(np.pi/180)
+    '''
     T = np.array([
         [1,0,0,0],
         [0,np.cos(theta),-np.sin(theta),0],
         [0,np.sin(theta),np.cos(theta),0],
         [0,0,0,1]
+        ]
+        )
+    '''
+    T = np.array([
+        [np.cos(phi),np.sin(phi)*np.sin(theta),np.sin(phi)*np.cos(theta),0],
+        [0,np.cos(theta),-np.sin(theta),0],
+        [-np.sin(phi),np.sin(theta)*np.cos(phi),np.cos(theta)*np.cos(phi),0],
+        [0,0,0,1]
         ])
+    cal = True
     while True:
         color, depth = camera.frames()
         depth = camera.transform_image(depth,T)
         depth_im = DepthImage(depth)
 
-        contours,tops = detector.detect_objects(color, depth)
-        #cv.imshow('all_obj',bin_im._image_data())
+        contours,tops,color_mask,depth_mask = detector.detect_objects(color, depth)
+        cv.imshow('color_mask',color_mask._image_data())
+        cv.imshow('depth_mask',depth_mask._image_data())
         cv.imshow('tops',tops._image_data())
         cv.imshow("color", color)
+        '''
+        # Find mean color of calibration cubes:
+        pts =[(276,77),(332,92),(403,72),(455,95),(263,340),(351,330),(427,340),(506,347)]
+        for pt in pts:
+            if not cal:
+                break
+            contour = detector.find_contour_near_point(contours,pt)
+            contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
+            contour = contour[:, 0, ::-1] #Swap x, y coordinates
+            mask = np.zeros_like(depth,dtype=np.uint8)
+            mask = cv.drawContours(mask,[contour],-1,255,cv.FILLED)
+            cv.imshow('mask',mask)
+            mean_color = cv.mean(color,mask=mask)
+            print("Color at point",pt,"is :",mean_color)
+        cal = False
+        '''
         if runflag:
             # Get segmask of object nearest mouseclick
             runflag = False
