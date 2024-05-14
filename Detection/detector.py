@@ -25,30 +25,54 @@ class Detector:
                 'Short_Orange':{'color':(157,225,246)},
                 'Tall_White':{'color':(253,253,253)}
                 }
-    def compare_color_to_cubes(self,color):
+    def compare_color_to_cubes(self, color):
+        """
+        Compares a given color to predefined cube colors and returns the matching cube name.
         
-        for cube_name,cube_props in self.cubes.items():
-            if self.is_same_color(color,cube_props['color']):
+        Args:
+            color (tuple): The color to compare.
+        
+        Returns:
+            str: Name of the cube if a match is found, otherwise None.
+        """
+        for cube_name, cube_props in self.cubes.items():
+            if self.is_same_color(color, cube_props['color']):
                 return cube_name
         return None
     
-    def get_color_from_contour(self,color_image,contour):
-        mask = np.zeros_like(color_image[:,:,2],dtype=np.uint8)
-        contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
-        contour = contour[:, 0, ::-1] #Swap x, y coordinates
-        mask = cv.drawContours(mask,[contour],-1,255,cv.FILLED)
-        mean_color = cv.mean(color_image,mask=mask)
-        mean_color = mean_color[:3]
-        int_mean_color = tuple(int(x) for x in mean_color)
-        return int_mean_color
+    def get_color_from_contour(self, color_image, contour):
+        """
+        Extracts the mean color from the specified contour area in the given color image.
+        
+        Args:
+            color_image (np.ndarray): The image from which color is extracted.
+            contour (Contour): The contour within which color is measured.
+        
+        Returns:
+            tuple: The mean color in (R, G, B) format.
+        """
+        mask = np.zeros_like(color_image[:, :, 2], dtype=np.uint8)
+        contour = contour.boundary_pixels.reshape(-1, 1, 2).astype(np.int32)
+        mask = cv.drawContours(mask, [contour[:, 0, ::-1]], -1, 255, cv.FILLED)
+        mean_color = cv.mean(color_image, mask=mask)[:3]
+        return tuple(int(x) for x in mean_color)
         
     def check_color_order(self,color_image,depth,points):
-        '''
-        checks the order of the colors
-        args:
-            color_image: np.ndarray of the color
-            points: list of points
-        '''
+        """
+    Checks the order of colors in the detected objects based on provided points and compares with predefined cube colors.
+
+    This function identifies contours in the image, finds contours near specified points, extracts colors from these
+    contours, and then verifies if these detected colors match the expected colors of the cubes. It logs a message if 
+    there is a mismatch.
+
+    Args:
+        color_image (np.ndarray): An image array containing the color data of the scene.
+        depth (np.ndarray): An image array containing the depth data of the scene.
+        points (list of tuple): A list of (x, y) tuples indicating points where the color check should be performed.
+
+    Returns:
+        None: This function prints output directly and does not return any value.
+        """
         detected_colors = []
         contours = self.detect_objects(color_image,depth)[0]
         for pt in points:
@@ -70,17 +94,20 @@ class Detector:
             if not self.is_same_color(self.cubes[key]['color'],colors):
                 print('Not same color',key,'expected: ',self.cubes[key]['color'], 'got : ',colors)
 
-    def is_same_color(self,recorded_color,known_color):
-        '''
-        compares two tuples and checks if their colors are within a tolerance level
-        '''
-        recorded_color = recorded_color[:3]
-        if len(recorded_color) != len(known_color):
-            raise ValueError("recorded color and known color should be the same size")
-
+    def is_same_color(self, recorded_color, known_color):
+        """
+        Determines if two colors are the same within a defined tolerance level.
+        
+        Args:
+            recorded_color (tuple): The first color to compare.
+            known_color (tuple): The second color to compare.
+        
+        Returns:
+            bool: True if the colors are the same within the tolerance, False otherwise.
+        """
         tolerance = self.get_cfg('color_tolerance')
-        for c1,c2 in zip(recorded_color,known_color):
-            if abs(c1-c2) > tolerance:
+        for c1, c2 in zip(recorded_color[:3], known_color):
+            if abs(c1 - c2) > tolerance:
                 return False
         return True
 
