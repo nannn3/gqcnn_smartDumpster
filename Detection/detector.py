@@ -14,7 +14,6 @@ class Detector:
             config_file (str): Path to the configuration file.
         """
         self.load_cfg(config_file)
-        #It might be a problem that tall orange and tall white are basically the same color, however the Y value of tall white will always be greater than that of tall orange
         self.cubes = {
                 'Tall_Green':{'color':(110,175,110)},
                 'Short_Yellow':{'color':(200,250,250)},
@@ -302,16 +301,6 @@ class Detector:
         nearest_contour = None
         x_click,y_click = pt
         for contour in contours:
-            '''
-            contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
-            # Compute distance from the point to the contour
-            distance = cv.pointPolygonTest(contour, pt, True)
-
-            # Check if this contour is closer than what we have seen so far
-            if distance < min_distance:
-                min_distance = distance
-                nearest_contour = contour
-            '''
             box = contour.bounding_box
             y,x = box.center
             dist = np.sqrt((x_click-x)**2 + (y_click - y)**2)
@@ -356,15 +345,6 @@ if __name__ == "__main__":
     theta = -0.0471
     theta *= (np.pi/180)
     phi = -.0047 *(np.pi/180)
-    '''
-    T = np.array([
-        [1,0,0,0],
-        [0,np.cos(theta),-np.sin(theta),0],
-        [0,np.sin(theta),np.cos(theta),0],
-        [0,0,0,1]
-        ]
-        )
-    '''
     T = np.array([
         [np.cos(phi),np.sin(phi)*np.sin(theta),np.sin(phi)*np.cos(theta),0],
         [0,np.cos(theta),-np.sin(theta),0],
@@ -373,15 +353,15 @@ if __name__ == "__main__":
         ])
     # Find mean color of calibration cubes:
     pts =[(276,77),(332,92),(403,72),(455,95),(263,340),(351,330),(427,340),(506,347)]
-    for _ in range(100):
+    for _ in range(60): #delay to get accurate readings
         color,depth = camera.frames()
         depth = camera.transform_image(depth,T)
-    print(detector.check_color_order(color,depth,pts))
+    
+    #Main event loop:    
     while True:
         color, depth = camera.frames()
         depth = camera.transform_image(depth,T)
         depth_im = DepthImage(depth)
-
         contours,tops,color_mask,depth_mask = detector.detect_objects(color, depth)
         cv.imshow('color_mask',color_mask._image_data())
         cv.imshow('depth_mask',depth_mask._image_data())
