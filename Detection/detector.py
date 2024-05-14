@@ -14,7 +14,30 @@ class Detector:
             config_file (str): Path to the configuration file.
         """
         self.load_cfg(config_file)
+        #It might be a problem that tall orange and tall white are basically the same color, however the Y value of tall white will always be greater than that of tall orange
+        self.cubes = {
+                'Tall_Green':{'color':(88,90,89)},
+                'Short_Yellow':{'color':(180,245,250)},
+                'Tall_Orange':{'color':(252,250,248)},
+                'Short_White':{'color':(252,255,248)},
+                'Short_Green':{'color':(144,205,158)},
+                'Tall_Yellow':{'color':(205,247,249)},
+                'Short_Orange':{'color':(146,196,246)},
+                'Tall_White':{'color':(253,253,253)}
+                }
+    def is_same_color(self,recorded_color,known_color):
+        '''
+        compares two tuples and checks if their colors are within a tolerance level
+        '''
+        if len(recorded_color) != len(known_color):
+            raise ValueError("recorded color and known color should be the same size")
 
+        tolerance = self.get_cfg('color_tolerance')
+        for c1,c2 in zip(recorded_color,known_color):
+            if abs(c1-c2) < tolerance:
+                return False
+
+        return True
     def get_cfg(self, key):
         """
         Get a configuration value.
@@ -286,7 +309,6 @@ if __name__ == "__main__":
         cv.imshow('depth_mask',depth_mask._image_data())
         cv.imshow('tops',tops._image_data())
         cv.imshow("color", color)
-        '''
         # Find mean color of calibration cubes:
         pts =[(276,77),(332,92),(403,72),(455,95),(263,340),(351,330),(427,340),(506,347)]
         for pt in pts:
@@ -299,9 +321,9 @@ if __name__ == "__main__":
             mask = cv.drawContours(mask,[contour],-1,255,cv.FILLED)
             cv.imshow('mask',mask)
             mean_color = cv.mean(color,mask=mask)
+
             print("Color at point",pt,"is :",mean_color)
         cal = False
-        '''
         if runflag:
             # Get segmask of object nearest mouseclick
             runflag = False
