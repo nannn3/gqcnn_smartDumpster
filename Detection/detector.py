@@ -19,11 +19,21 @@ class Detector:
                 'Short_Yellow':{'color':(200,250,250)},
                 'Tall_Orange':{'color':(132,195,245)},
                 'Short_White':{'color':(252,250,248)},
-                'Short_Green':{'color':(165,235,165)},
+                'Short_Green':{'color':(155,230,155)},
                 'Tall_Yellow':{'color':(235,247,249)},
                 'Short_Orange':{'color':(157,225,246)},
                 'Tall_White':{'color':(253,253,253)}
                 }
+    def draw_cube_points(self):
+        for name,prop in self.cubes.items():
+            try:
+                contour = prop['contour']
+                box = contour.bounding_box
+                y,x = box.center
+                print(f"{name} center point at ({x},{y})")
+            except KeyError:
+                print(f"{name} has no contour")
+
     def compare_color_to_cubes(self, color):
         """
         Compares a given color to predefined cube colors and returns the matching cube name.
@@ -39,6 +49,63 @@ class Detector:
                 return cube_name
         return None
     
+    def find_calibration_cubes(self,color_image,depth):
+        '''
+        Finds all the calibration cubes and adds their contour to the cube_prop dict
+        Args:
+            color_image (np.ndarray) the color image
+            contours a list of Contour objects
+        Raises:
+            ValueError if there are less contours than cubes in the dict.
+        '''
+        contours = self.detect_objects(color_image,depth)[0]
+        if len(contours) < len(self.cubes):
+            raise ValueError("There should be at least as many contours as cubes")
+        for contour in contours:
+            add_flag = True
+            color = self.get_color_from_contour(color_image,contour)
+            cube_name = self.compare_color_to_cubes(color)
+            if cube_name is None:
+                continue
+            cube_prop = self.cubes[cube_name]
+            
+            height = self.find_object_tops(depth,[contour])[1]
+            if 'White' in cube_name:
+                #white cubes have basically the same color, so we can use height to tell them apart
+                if cube_name == 'Short_White':
+                    other_cube = 'Tall_White'
+                else:
+                    other_cube = 'Short_White'
+                other_cube_prop = self.cubes[other_cube]
+                other_cube_height = other_cube_prop.get('height',None)
+                foo = cube_prop.get('height',None)
+                if foo is not None and other_cube_height is None:
+                    other_cube_height = foo
+                if other_cube_height is not None:
+                    if (height > other_cube_height and cube_name == 'Tall_White') or (height < other_cube_height and cube_name == 'Short_White'):
+                        temp_contour = other_cube_prop.get('contour',None)
+                        if temp_contour is None:
+                            temp_contour = cube_prop.get('contour',None)
+                        other_cube_prop['contour'] = contour
+                        other_cube_prop['height'] = height
+
+                        self.cubes[other_cube] = other_cube_prop
+
+                        cube_prop['contour'] = temp_contour
+                        cube_prop['height'] = other_cube_height
+                        self.cubes[cube_name] = cube_prop
+                        print(f'contour added to {cube_name}')
+                        add_flag = False
+            if add_flag:
+                cube_prop['contour'] = contour
+                cube_prop['height'] = height
+                self.cubes[cube_name] = cube_prop
+                print(f'contour added to {cube_name}')
+
+
+
+                
+
     def get_color_from_contour(self, color_image, contour):
         """
         Extracts the mean color from the specified contour area in the given color image.
@@ -186,7 +253,7 @@ class Detector:
             # Combine the current mask with the final binary image
             final_bin_im = cv.bitwise_or(final_bin_im, close_to_min.astype(np.uint8))
         
-        return final_bin_im
+        return final_bin_im,min_depth
 
     def create_foreground_mask(self,color_im):
         """
@@ -353,10 +420,13 @@ if __name__ == "__main__":
         ])
     # Find mean color of calibration cubes:
     pts =[(276,77),(332,92),(403,72),(455,95),(263,340),(351,330),(427,340),(506,347)]
+
     for _ in range(60): #delay to get accurate readings
         color,depth = camera.frames()
         depth = camera.transform_image(depth,T)
-    
+    detector.find_calibration_cubes(color,depth)
+    detector.check_color_order(color,depth,pts)
+    detector.draw_cube_points()
     #Main event loop:    
     while True:
         color, depth = camera.frames()
