@@ -4,7 +4,7 @@ import numpy as np
 from autolab_core import ColorImage, DepthImage, BinaryImage, Contour
 import cv2 as cv
 import json
-
+from detectedObject import DetectedObject
 class Detector:
     def __init__(self, config_file):
         """
@@ -14,7 +14,7 @@ class Detector:
             config_file (str): Path to the configuration file.
         """
         self.load_cfg(config_file)
-        self.cubes = {
+        self.cubes = { # Expected calibration cubes and their average colors:
                 'Tall_Green':{'color':(110,175,110)},
                 'Short_Yellow':{'color':(200,250,250)},
                 'Tall_Orange':{'color':(132,195,245)},
@@ -24,11 +24,15 @@ class Detector:
                 'Short_Orange':{'color':(157,225,246)},
                 'Tall_White':{'color':(253,253,253)}
                 }
+        for name,prop in self.cubes.items():
+            cube = DetectedObject(name,color = prop['color'])
+            self.cubes[name] = cube
+        print (self.cubes)
     def draw_cube_points(self,color_image):
         color_image = color_image.copy()
-        for name,prop in self.cubes.items():
+        for name,detected in self.cubes.items():
             try:
-                contour = prop['contour']
+                contour = detected.get_property('contour')
                 box = contour.bounding_box
                 y,x = box.center
                 x = int(x)
@@ -53,8 +57,8 @@ class Detector:
         Returns:
             str: Name of the cube if a match is found, otherwise None.
         """
-        for cube_name, cube_props in self.cubes.items():
-            if self.is_same_color(color, cube_props['color']):
+        for cube_name, cube in self.cubes.items():
+            if self.is_same_color(color, cube.color):
                 return cube_name
         return None
     
@@ -89,15 +93,16 @@ class Detector:
             if 'White' in cube_name:
                 white_cubes.append((cube_name, cube_prop))
             else:
-                self.cubes[cube_name].update(cube_prop)
+                self.cubes[cube_name].update_properties(**cube_prop)
                 print(f'Contour added to {cube_name}')
 
         # Compare white cubes based on height and assign the correct labels
         if white_cubes:
             # Sort by height descending; higher height means further away
             sorted_white_cubes = sorted(white_cubes, key=lambda x: x[1]['height'], reverse=True)
-            self.cubes['Short_White'].update(sorted_white_cubes[0][1])
-            self.cubes['Tall_White'].update(sorted_white_cubes[1][1])
+            print(sorted_white_cubes)
+            self.cubes['Short_White'].update_properties(**sorted_white_cubes[0][1])
+            self.cubes['Tall_White'].update_properties(**sorted_white_cubes[1][1])
             print(f'Contour added to Short_White')
             print(f'Contour added to Tall_White')
 
@@ -154,7 +159,7 @@ class Detector:
                 'Tall_White'
                 ]
         for key,colors in zip(cubes,detected_colors):
-            if not self.is_same_color(self.cubes[key]['color'],colors):
+            if not self.is_same_color(self.cubes[key].color,colors):
                 print('Not same color',key,'expected: ',self.cubes[key]['color'], 'got : ',colors)
 
     def is_same_color(self, recorded_color, known_color):
