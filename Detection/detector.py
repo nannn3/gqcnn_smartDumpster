@@ -19,14 +19,14 @@ class Detector:
         """
         self.load_cfg(config_file)
         self.cubes = { # Expected calibration cubes and their average colors:
-                'Tall_Green':{'color':(110,175,110)},
-                'Short_Yellow':{'color':(200,250,250)},
-                'Tall_Orange':{'color':(132,195,245)},
-                'Short_White':{'color':(252,250,248)},
-                'Short_Green':{'color':(165,230,165)},
-                'Tall_Yellow':{'color':(235,247,249)},
-                'Short_Orange':{'color':(157,225,246)},
-                'Tall_White':{'color':(253,253,253)}
+                'Tall_Green':{'color':(55,103,170)},
+                'Short_Yellow':{'color':(90,55,250)},
+                'Tall_Orange':{'color':(100,105,235)},
+                'Short_White':{'color':(5,5,225)},
+                'Short_Green':{'color':(55,55,245)},
+                'Tall_Yellow':{'color':(35,15,245)},
+                'Short_Orange':{'color':(100,90,245)},
+                'Tall_White':{'color':(5,5,245)}
                 }
         self.detected_objects = {}
 
@@ -44,7 +44,6 @@ class Detector:
                 y,x = box.center
                 x = int(x)
                 y = int(y)
-                print(f"{name} center point at ({x},{y})")
                 contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
                 contour = contour[:, 0, ::-1] #Swap x, y coordinates
                 color_image = cv.drawContours(color_image,[contour],-1,(255,0,0),thickness = 2)
@@ -86,7 +85,7 @@ class Detector:
             raise ValueError("There should be at least as many contours as cubes")
 
         white_cubes = []
-
+        color_image = cv.cvtColor(color_image, cv.COLOR_RGB2HSV)
         for contour in contours:
             color = self.get_color_from_contour(color_image, contour)
             cube_name = self.compare_color_to_cubes(color)
@@ -101,18 +100,16 @@ class Detector:
                 white_cubes.append((cube_name, cube_prop))
             else:
                 self.cubes[cube_name].update_properties(**cube_prop)
-                print(f'Contour added to {cube_name}')
 
         # Compare white cubes based on height and assign the correct labels
         if white_cubes:
             # Sort by height descending; higher height means further away
             sorted_white_cubes = sorted(white_cubes, key=lambda x: x[1]['height'], reverse=True)
-            print(sorted_white_cubes)
-            self.cubes['Short_White'].update_properties(**sorted_white_cubes[0][1])
-            self.cubes['Tall_White'].update_properties(**sorted_white_cubes[1][1])
-            print(f'Contour added to Short_White')
-            print(f'Contour added to Tall_White')
-
+            try:
+                self.cubes['Short_White'].update_properties(**sorted_white_cubes[0][1])
+                self.cubes['Tall_White'].update_properties(**sorted_white_cubes[1][1])
+            except IndexError:
+                pass
 
 
     def get_color_from_contour(self, color_image, contour):
@@ -150,9 +147,10 @@ class Detector:
         """
         detected_colors = []
         contours = self.detect_objects(color_image,depth)[0]
+        hsv = cv.cvtColor(color_image,cv.COLOR_RGB2HSV)
         for pt in points:
             contour = self.find_contour_near_point(contours,pt)
-            color = self.get_color_from_contour(color_image,contour)
+            color = self.get_color_from_contour(hsv,contour)
             detected_colors.append(color)
          
         cubes =[ 
@@ -409,7 +407,7 @@ if __name__ == "__main__":
         [0,0,0,1]
         ])
     # Find mean color of calibration cubes:
-    pts =[(276,77),(332,92),(403,72),(455,95),(263,340),(351,330),(427,340),(506,347)]
+    pts =[(245,72),(305,90),(370,64),(423,82),(261,344),(340,324),(406,324),(497,298)]
 
     for _ in range(60): #delay to get accurate readings
         color,depth = camera.frames()
@@ -433,6 +431,7 @@ if __name__ == "__main__":
             cv.waitKey(1)
                   
             containing_contour = detector.find_contour_near_point(contours,posList[0])
+            color = cv.cvtColor(color,cv.COLOR_RGB2HSV)
             print(detector.get_color_from_contour(color,containing_contour))
             posList.pop(0)
             if containing_contour is None:
