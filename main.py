@@ -98,45 +98,23 @@ if __name__ == "__main__":
 
     # Set up object detector
     detector = detector.Detector("Detection/example_config.json")
-    '''
-    R = np.array([
-        [-.9998,.0095,-.0196],
-        [.0112,.9957,-.0924],
-        [.0187,-.0926,-.9955]
-        ])
-    '''
-    theta = -.053 * (3.14/180)
-    R = np.array([[1,0,0,0],
-                [0,np.cos(theta),-np.sin(theta),0],
-                [0,np.sin(theta),np.cos(theta),0],
-                [0,0,0,1]])
+    theta = -.0471 * (np.pi/180)
+    phi = -.0047 *(np.pi/180)
+
+
+    R = np.array([[np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta)*np.sin(phi),0],
+                 [0,np.cos(theta),-np.sin(theta),0],
+                 [-np.sin(phi),np.sin(theta)*np.cos(phi),np.cos(theta)*np.cos(phi),0],
+                 [0,0,0,1]])
     # Main event loop
     while 1:
         color, depth = camera.frames()
         depth = camera.transform_image(depth,R)
-        '''
-        point_cloud = camera.depth_to_point_cloud(depth)
-        point_cloud = camera.rotate_point_cloud(point_cloud,R) 
-        depth = camera.point_cloud_to_depth(point_cloud)
-        '''
         depth_color = camera.depth_to_color(depth)
         cv.imshow("color", color)
         cv.imshow('depth', depth_color)
-        '''
-        Tape depths:
-        depth_TL = depth[136][189]
-        depth_TR = depth[92][451]
-        depth_BL = depth[331][219]
-        depth_BR = depth[270][530]
-        
-        print(f'depth at (189,136):{depth_TL}\n'
-                f'depth at (451,92):{depth_TR}\n'
-                f'depth at (219,331):{depth_BL}\n'
-                f'depth at (530,270):{depth_BR}\n'
-                )
-        '''
        
-        contours, full_binary_image = detector.detect_objects(color, depth)
+        contours, full_binary_image,*_ = detector.detect_objects(color, depth)
         cv.imshow("binary_image", full_binary_image._image_data())
 
         x,y = pixel_input.get_pixel_coordinates()
@@ -148,12 +126,6 @@ if __name__ == "__main__":
                 print("No object found")
             else:
                 single_obj_bin_im = full_binary_image.contour_mask(containing_contour)
-                '''
-               masked_depth = np.multiply(single_obj_bin_im._image_data()/255, depth)
-                max_value_index =  np.unravel_index(np.argmax(masked_depth),masked_depth.shape)
-                
-                print(max_value_index,masked_depth[max_value_index[0],max_value_index[1]])
-                '''
                 action = invokeDexNet(color, depth, single_obj_bin_im)
                 if policy_config["vis"]["final_grasp"]:
                     im = draw_grasp(action,color)#,depth_at_x_y)
