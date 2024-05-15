@@ -28,7 +28,7 @@ def invokeDexNet(color, depth, segmask):
         action: Grasping action.
     """
     color_im = ColorImage(color)
-    depth_im = DepthImage(depth)#.inpaint(1)
+    depth_im = DepthImage(depth).inpaint(1)
     rgbd_im = RgbdImage.from_color_and_depth(color_im, depth_im)
     camera_intr = CameraIntrinsics.load(os.path.join(os.path.dirname(os.path.realpath(__file__)), "Astra/Astra_IR.intr"))
     state = RgbdImageState(rgbd_im, camera_intr, segmask=segmask)
@@ -111,6 +111,8 @@ if __name__ == "__main__":
         color, depth = camera.frames()
         depth = camera.transform_image(depth,R)
         depth_color = camera.depth_to_color(depth)
+        detector.find_calibration_cubes(color,depth)
+        detector.draw_cube_points(color)
         cv.imshow("color", color)
         cv.imshow('depth', depth_color)
        
