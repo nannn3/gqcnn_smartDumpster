@@ -20,11 +20,11 @@ class Detector:
         self.load_cfg(config_file)
         self.cubes = { # Expected calibration cubes and their average colors:
                 'Tall_Green':{'color':(55,103,170)},
-                'Short_Yellow':{'color':(90,55,250)},
+                'Short_Blue':{'color':(90,55,250)},
                 'Tall_Orange':{'color':(100,105,235)},
                 'Short_White':{'color':(5,5,225)},
                 'Short_Green':{'color':(55,55,245)},
-                'Tall_Yellow':{'color':(35,15,245)},
+                'Tall_Blue':{'color':(35,15,245)},
                 'Short_Orange':{'color':(100,90,245)},
                 'Tall_White':{'color':(5,5,245)}
                 }
@@ -131,19 +131,19 @@ class Detector:
         
     def check_color_order(self,color_image,depth,points):
         """
-    Checks the order of colors in the detected objects based on provided points and compares with predefined cube colors.
+        Checks the order of colors in the detected objects based on provided points and compares with predefined cube colors.
 
-    This function identifies contours in the image, finds contours near specified points, extracts colors from these
-    contours, and then verifies if these detected colors match the expected colors of the cubes. It logs a message if 
-    there is a mismatch.
+        This function identifies contours in the image, finds contours near specified points, extracts colors from these
+        contours, and then verifies if these detected colors match the expected colors of the cubes. It logs a message if 
+        there is a mismatch.
 
-    Args:
-        color_image (np.ndarray): An image array containing the color data of the scene.
-        depth (np.ndarray): An image array containing the depth data of the scene.
-        points (list of tuple): A list of (x, y) tuples indicating points where the color check should be performed.
+        Args:
+            color_image (np.ndarray): An image array containing the color data of the scene.
+            depth (np.ndarray): An image array containing the depth data of the scene.
+            points (list of tuple): A list of (x, y) tuples indicating points where the color check should be performed.
 
-    Returns:
-        None: This function prints output directly and does not return any value.
+        Returns:
+            None: This function prints output directly and does not return any value.
         """
         detected_colors = []
         contours = self.detect_objects(color_image,depth)[0]
@@ -155,11 +155,11 @@ class Detector:
          
         cubes =[ 
                 'Tall_Green',
-                'Short_Yellow',
+                'Short_Blue',
                 'Tall_Orange',
                 'Short_White',
                 'Short_Green',
-                'Tall_Yellow',
+                'Tall_Blue',
                 'Short_Orange',
                 'Tall_White'
                 ]
@@ -203,7 +203,7 @@ class Detector:
         filtered_depth_im = self.create_threshold_im(depth_im)
         foreground_mask = self.create_foreground_mask(color_im)
         overlayed_bin_ims = foreground_mask.pixelwise_or(filtered_depth_im)
-        binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))        
+        binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))
         
         contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
         return contours,binary_im_filtered,foreground_mask,filtered_depth_im
