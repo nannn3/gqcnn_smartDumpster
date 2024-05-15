@@ -19,20 +19,26 @@ class Detector:
                 'Short_Yellow':{'color':(200,250,250)},
                 'Tall_Orange':{'color':(132,195,245)},
                 'Short_White':{'color':(252,250,248)},
-                'Short_Green':{'color':(155,230,155)},
+                'Short_Green':{'color':(165,230,165)},
                 'Tall_Yellow':{'color':(235,247,249)},
                 'Short_Orange':{'color':(157,225,246)},
                 'Tall_White':{'color':(253,253,253)}
                 }
-    def draw_cube_points(self):
+    def draw_cube_points(self,color_image):
+        color_image = color_image.copy()
         for name,prop in self.cubes.items():
             try:
                 contour = prop['contour']
                 box = contour.bounding_box
                 y,x = box.center
                 print(f"{name} center point at ({x},{y})")
+                contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
+                contour = contour[:, 0, ::-1] #Swap x, y coordinates
+                color_image = cv.drawContours(color_image,[contour],-1,(255,0,0),thickness = 2)
             except KeyError:
                 print(f"{name} has no contour")
+
+        cv.imshow('calibration_cubes',color_image)
 
     def compare_color_to_cubes(self, color):
         """
@@ -413,8 +419,8 @@ if __name__ == "__main__":
         color,depth = camera.frames()
         depth = camera.transform_image(depth,T)
     detector.find_calibration_cubes(color,depth)
-    detector.check_color_order(color,depth,pts)
-    detector.draw_cube_points()
+    #detector.check_color_order(color,depth,pts)
+    detector.draw_cube_points(color)
     #Main event loop:    
     while True:
         color, depth = camera.frames()
