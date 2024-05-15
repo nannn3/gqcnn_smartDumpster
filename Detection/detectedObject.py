@@ -49,7 +49,7 @@ class DetectedObject:
             raise KeyError(f"Property '{key}' not found in object '{self.name}'.")
         return self.properties[key]
 
-    def is_color_match(self, color):
+    def is_same_color(self, color):
         """
         Check if a given color matches the detected object's color within the object's tolerance.
 
