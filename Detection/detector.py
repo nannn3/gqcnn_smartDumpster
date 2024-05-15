@@ -24,10 +24,13 @@ class Detector:
                 'Short_Orange':{'color':(157,225,246)},
                 'Tall_White':{'color':(253,253,253)}
                 }
+        self.detected_objects = {}
+
         for name,prop in self.cubes.items():
+            # Update to DetectedObject class
             cube = DetectedObject(name,color = prop['color'])
             self.cubes[name] = cube
-        print (self.cubes)
+
     def draw_cube_points(self,color_image):
         color_image = color_image.copy()
         for name,detected in self.cubes.items():
@@ -58,7 +61,7 @@ class Detector:
             str: Name of the cube if a match is found, otherwise None.
         """
         for cube_name, cube in self.cubes.items():
-            if self.is_same_color(color, cube.color):
+            if cube.is_same_color(color):
                 return cube_name
         return None
     
@@ -159,25 +162,10 @@ class Detector:
                 'Tall_White'
                 ]
         for key,colors in zip(cubes,detected_colors):
-            if not self.is_same_color(self.cubes[key].color,colors):
+            cube = self.cubes[key]
+            if not cube.is_same_color(colors):
                 print('Not same color',key,'expected: ',self.cubes[key]['color'], 'got : ',colors)
 
-    def is_same_color(self, recorded_color, known_color):
-        """
-        Determines if two colors are the same within a defined tolerance level.
-        
-        Args:
-            recorded_color (tuple): The first color to compare.
-            known_color (tuple): The second color to compare.
-        
-        Returns:
-            bool: True if the colors are the same within the tolerance, False otherwise.
-        """
-        tolerance = self.get_cfg('color_tolerance')
-        for c1, c2 in zip(recorded_color[:3], known_color):
-            if abs(c1 - c2) > tolerance:
-                return False
-        return True
 
     def get_cfg(self, key):
         """
@@ -216,10 +204,6 @@ class Detector:
         binary_im_filtered = self.filter_im(overlayed_bin_ims, self.get_cfg('morphological_filter_size'))        
         
         contours = binary_im_filtered.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))
-        #tops_of_objects = self.find_object_tops(depth, contours)
-        #tops_of_objects = BinaryImage(tops_of_objects)
-        #contours = tops_of_objects.find_contours(min_area = self.get_cfg('min_contour_area'), max_area = self.get_cfg('max_contour_area'))
-        #return contours,tops_of_objects
         return contours,binary_im_filtered,foreground_mask,filtered_depth_im
    
     def find_object_tops(self, depth_image, contours, threshold=.01):
