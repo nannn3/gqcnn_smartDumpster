@@ -31,10 +31,13 @@ class Detector:
                 contour = prop['contour']
                 box = contour.bounding_box
                 y,x = box.center
+                x = int(x)
+                y = int(y)
                 print(f"{name} center point at ({x},{y})")
                 contour = contour.boundary_pixels.reshape(-1,1,2).astype(np.int32)
                 contour = contour[:, 0, ::-1] #Swap x, y coordinates
                 color_image = cv.drawContours(color_image,[contour],-1,(255,0,0),thickness = 2)
+                color_image = cv.putText(color_image,name,(x,y),cv.FONT_HERSHEY_PLAIN,1,(255,0,0))
             except KeyError:
                 print(f"{name} has no contour")
 
