@@ -4,7 +4,11 @@ import numpy as np
 from autolab_core import ColorImage, DepthImage, BinaryImage, Contour
 import cv2 as cv
 import json
-from detectedObject import DetectedObject
+if __name__ == "__main__":
+    import detectedObject
+else:
+    from . import detectedObject
+
 class Detector:
     def __init__(self, config_file):
         """
@@ -28,7 +32,7 @@ class Detector:
 
         for name,prop in self.cubes.items():
             # Update to DetectedObject class
-            cube = DetectedObject(name,color = prop['color'])
+            cube = detectedObject.DetectedObject(name,color = prop['color'])
             self.cubes[name] = cube
 
     def draw_cube_points(self,color_image):
@@ -164,7 +168,7 @@ class Detector:
         for key,colors in zip(cubes,detected_colors):
             cube = self.cubes[key]
             if not cube.is_same_color(colors):
-                print('Not same color',key,'expected: ',self.cubes[key]['color'], 'got : ',colors)
+                print('Not same color',key,'expected: ',self.cubes[key].color, 'got : ',colors)
 
 
     def get_cfg(self, key):
@@ -411,7 +415,7 @@ if __name__ == "__main__":
         color,depth = camera.frames()
         depth = camera.transform_image(depth,T)
     detector.find_calibration_cubes(color,depth)
-    #detector.check_color_order(color,depth,pts)
+    detector.check_color_order(color,depth,pts)
     detector.draw_cube_points(color)
     #Main event loop:    
     while True:
