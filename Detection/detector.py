@@ -49,46 +49,50 @@ class Detector:
                 return cube_name
         return None
     
-    def find_calibration_cubes(self,color_image,depth):
-        '''
-        Finds all the calibration cubes and adds their contour to the cube_prop dict
+    def find_calibration_cubes(self, color_image, depth):
+        """
+        Finds all calibration cubes and categorizes them by color and height.
+        It specifically differentiates between two white cubes based on their relative heights.
+
         Args:
-            color_image (np.ndarray) the color image
-            contours a list of Contour objects
+            color_image (np.ndarray): The color image.
+            depth (np.ndarray): The depth image.
+
         Raises:
-            ValueError if there are less contours than cubes in the dict.
-        '''
-        contours = self.detect_objects(color_image,depth)[0]
+            ValueError: If there are fewer contours detected than cubes expected in self.cubes.
+        """
+        contours = self.detect_objects(color_image, depth)[0]
         if len(contours) < len(self.cubes):
             raise ValueError("There should be at least as many contours as cubes")
+
+        white_cubes = []
+
         for contour in contours:
-            color = self.get_color_from_contour(color_image,contour)
+            color = self.get_color_from_contour(color_image, contour)
             cube_name = self.compare_color_to_cubes(color)
             if cube_name is None:
                 continue
-            cube_prop = self.cubes[cube_name]
-            height = self.find_object_tops(depth,[contour])[1]
+
+            height = self.find_object_tops(depth, [contour])[1]
+            cube_prop = {'contour': contour, 'height': height}
+
+            # Collect height data for white cubes to compare later
             if 'White' in cube_name:
-                # white cubes have basically the same color, so we can use height to tell them apart
-                # The smaller cube has a bigger height value (it's further from the camera)
-                cube_name = 'Short_White'
-                cube_prop = self.cubes[cube_name]
-                short_white_height = cube_prop.get('height',None)
-                if short_white_height is not None and height < short_white_height:
-                    cube_name = 'Tall_White'
-                    cube_prop = self.cubes[cube_name]
-                elif short_white_height is not None and height > short_white_height:
-                    pass #TODO Fix this later
-                
-                
-            cube_prop['contour'] = contour
-            cube_prop['height'] = height
-            self.cubes[cube_name] = cube_prop
-            print(f'contour added to {cube_name}')
+                white_cubes.append((cube_name, cube_prop))
+            else:
+                self.cubes[cube_name].update(cube_prop)
+                print(f'Contour added to {cube_name}')
+
+        # Compare white cubes based on height and assign the correct labels
+        if white_cubes:
+            # Sort by height descending; higher height means further away
+            sorted_white_cubes = sorted(white_cubes, key=lambda x: x[1]['height'], reverse=True)
+            self.cubes['Short_White'].update(sorted_white_cubes[0][1])
+            self.cubes['Tall_White'].update(sorted_white_cubes[1][1])
+            print(f'Contour added to Short_White')
+            print(f'Contour added to Tall_White')
 
 
-
-                
 
     def get_color_from_contour(self, color_image, contour):
         """
