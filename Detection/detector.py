@@ -19,13 +19,13 @@ class Detector:
         """
         self.load_cfg(config_file)
         self.cubes = { # Expected calibration cubes and their average colors:
-                'Tall_Green':{'color':(55,103,170)},
-                'Short_Blue':{'color':(90,55,250)},
-                'Tall_Orange':{'color':(100,105,235)},
+                'Tall_Green':{'color':(55,110,160)},
+                'Short_Blue':{'color':(20,195,80)},
+                'Tall_Orange':{'color':(100,120,235)},
                 'Short_White':{'color':(5,5,225)},
-                'Short_Green':{'color':(55,55,245)},
-                'Tall_Blue':{'color':(35,15,245)},
-                'Short_Orange':{'color':(100,90,245)},
+                'Short_Green':{'color':(55,55,225)},
+                'Tall_Blue':{'color':(10,190,145)},
+                'Short_Orange':{'color':(100,115,245)},
                 'Tall_White':{'color':(5,5,245)}
                 }
         self.detected_objects = {}
@@ -407,7 +407,7 @@ if __name__ == "__main__":
         [0,0,0,1]
         ])
     # Find mean color of calibration cubes:
-    pts =[(245,72),(305,90),(370,64),(423,82),(261,344),(340,324),(406,324),(497,298)]
+    pts =[(245,72),(305,90),(370,64),(423,82),(261,344),(340,324),(411,324),(497,298)]
 
     for _ in range(60): #delay to get accurate readings
         color,depth = camera.frames()
