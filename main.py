@@ -87,6 +87,21 @@ def draw_grasp(action, im,depth_at_x_y=None):
     
     return im_rec
 
+def calibrate(color,depth,detector):
+    color_copy = color.copy()
+    contours,full_bin_im,*_ = detector.detect_objects(color,depth)
+    try:
+        detector.find_calibration_cubes(color,depth)
+    except ValueError:
+        return None
+    for cube_name,cube in detector.cubes.items():
+            cube_seg_mask = full_bin_im.contour_mask(cube.get_property('contour'))
+            action = invokeDexNet(color,depth,cube_seg_mask)
+            cube.update_properties(action=action)
+            color_copy = draw_grasp(action,color_copy)
+    return color_copy
+
+
 if __name__ == "__main__":
     camera_file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),'Astra')
     color_intr_file = os.path.join(camera_file_path,'Astra_Color.intr')
@@ -106,6 +121,22 @@ if __name__ == "__main__":
                  [0,np.cos(theta),-np.sin(theta),0],
                  [-np.sin(phi),np.sin(theta)*np.cos(phi),np.cos(theta)*np.cos(phi),0],
                  [0,0,0,1]])
+    retries = 0
+    cal_grasps = None
+    while retries < 100 and cal_grasps is None:
+        try:
+            color, depth = camera.frames()
+            depth = camera.transform_image(depth,R)
+            cal_grasps = calibrate(color,depth,detector)
+        except KeyError as e:
+            print(f'{e}, retrying')
+            retries += 1
+    if retries == 100:
+        raise Exception("Couldn't find cubes")
+
+    cal_grasps = calibrate(color,depth,detector)
+    cv.imshow('calibration_grasps',cal_grasps)
+
     # Main event loop
     while 1:
         color, depth = camera.frames()
@@ -136,4 +167,3 @@ if __name__ == "__main__":
             
 
         cv.waitKey(1)
-
