@@ -92,6 +92,7 @@ class Astra():
         self.configure_streams()
         self._depth_stream.start()
         self._color_stream.start()
+        self._color_stream.set_property(c_api.ONI_STREAM_PROPERTY_GAIN,550)
         self._running = True
 
     def configure_streams(self):
@@ -105,7 +106,8 @@ class Astra():
         self._color_stream.set_video_mode(c_api.OniVideoMode(
             pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_RGB888,
             resolutionX=self.WIDTH, resolutionY=self.HEIGHT, fps=self.FPS))
-
+        self._color_stream.set_property(c_api.ONI_STREAM_PROPERTY_AUTO_WHITE_BALANCE,False)
+        self._color_stream.set_property(c_api.ONI_STREAM_PROPERTY_AUTO_EXPOSURE,False)
         self._dev.set_image_registration_mode(True)
         self._dev.set_depth_color_sync_enabled(True)
 
@@ -358,7 +360,11 @@ if __name__ == "__main__":
         [0,np.sin(theta),np.cos(theta),0],
         [0,0,0,1]
         ])
-
+    color,depth = camera.frames()
+    #for i in range(250,500,50):
+     #   camera._color_stream.set_property(c_api.ONI_STREAM_PROPERTY_GAIN,i)
+      #  color,depth = camera.frames()
+       # cv2.imshow(str(i),color)
     try:
         while True:
             color, depth = camera.frames()
