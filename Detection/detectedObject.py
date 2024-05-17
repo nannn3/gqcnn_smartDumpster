@@ -66,6 +66,7 @@ class DetectedObject:
         if self.color is None:
             raise ValueError(f"{self.name} has no color set for comparison.")
         return all(abs(c1 - c2) <= self.tolerance for c1, c2 in zip(self.color, color))
+    
     def __lt__(self,other):
         """
         Compare this DetectedObject to another based on the x coordinates of the contour's center
@@ -77,8 +78,23 @@ class DetectedObject:
             KeyError if either object doesn't have a contour
         """
         try:
-            return self.get_property('contour').bounding_box.center[1] < other.get_property('contour').bounding_box.center[1]
+            return self.get_center()[0] < other.get_center()[0]
         except KeyError as e:
             raise e
+
+    def get_center(self):
+        '''
+        Gets the center point of the contour associated with the object
+        Returns:
+            tuple( x,y) of the center of the object
+        Raises:
+            KeyError if it has no contour
+        '''
+        try: 
+            y,x = self.get_property('contour').bounding_box.center
+            return (x,y)
+        except KeyError as e:
+            raise e
+
     def __str__(self):
         return f"{self.name} with color {self.color}, properties: {self.properties}"
