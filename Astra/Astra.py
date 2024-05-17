@@ -322,42 +322,50 @@ if __name__ == "__main__":
     camera.start()
     color,depth = camera.frames() 
     
-    '''
     # TEST to find best theta value
     min_dif = np.inf
     best_theta = 0;
-    for i in range(0,100,1):
-
-        theta_deg = - i*.001;
-        theta = theta_deg*(3.14159265/180)
+    best_phi = 0
+    for i in range(-100,100,2):
+        for j in range(-100,100,2)
+        theta_deg = i*.001
+        theta = theta_deg*(np.pi/180)
+        phi_deg = j * .001
+        phi = phi_deg *(np.pi/180)
 
         T = np.array([
-            [1,0,0,0],
+            [np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta)*np.sin(phi),0],
             [0,np.cos(theta),-np.sin(theta),0],
-            [0,np.sin(theta),np.cos(theta),0],
+            [-np.sin(phi),np.sin(theta)*np.cos(phi),np.cos(theta)*np.cos(phi),0],
             [0,0,0,1]
             ])
         transformed_depth = camera.transform_image(depth,T)
         
-        d1 = transformed_depth[89][435]
-        d2 = transformed_depth[250][215]
-        d3 = transformed_depth[100][222]
-        d4 = transformed_depth[240][466]
-        vals = [d1,d2,d3,d4]
+        d1 = transformed_depth[45][272]
+        d2 = transformed_depth[46][382]
+        d3 = transformed_depth[311][345]
+        d4 = transformed_depth[299][509]
+        d5 = transformed_depth[164][370]
+        vals = [d1,d2,d3,d4,d5]
+        if 0 in vals:
+            continue
         dif = average_dif(vals)
+
         if dif < min_dif:
             best_theta = theta_deg
+            best_phi = phi_deg
             min_dif = dif
-    print('Best found theta = -',best_theta,'Best average dif:',min_dif)
+    print('Best found theta = ',best_theta,'Best Phi = ',best_phi,'Best average dif:',min_dif)
     ### end test
-    '''
-    theta = -0.043
-    theta *= (3.141592/180)
+    theta =best_theta
+    theta *= (np.pi/180)
+    phi = best_phi
+    phi *= (np.pi/180)
 
     T = np.array([
-        [1,0,0,0],
+        [np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta)*np.sin(phi),0],
         [0,np.cos(theta),-np.sin(theta),0],
-        [0,np.sin(theta),np.cos(theta),0],
+        [-np.sin(phi),np.sin(theta)*np.cos(phi),np.cos(theta)*np.cos(phi),0],
         [0,0,0,1]
         ])
     color,depth = camera.frames()
