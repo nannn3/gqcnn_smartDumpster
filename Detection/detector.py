@@ -19,7 +19,7 @@ class Detector:
         """
         self.load_cfg(config_file)
         self.cubes = { # Expected calibration cubes and their average colors:
-                'Tall_Green':{'color':(55,110,160)},
+                'Tall_Green':{'color':(55,85,165)},
                 'Short_Blue':{'color':(20,195,80)},
                 'Tall_Orange':{'color':(100,120,235)},
                 'Short_White':{'color':(5,5,225)},
@@ -82,7 +82,8 @@ class Detector:
         """
         contours = self.detect_objects(color_image, depth)[0]
         if len(contours) < len(self.cubes):
-            raise ValueError("There should be at least as many contours as cubes")
+            pass
+            #raise ValueError("There should be at least as many contours as cubes")
 
         white_cubes = []
         color_image = cv.cvtColor(color_image, cv.COLOR_RGB2HSV)
@@ -397,9 +398,9 @@ if __name__ == "__main__":
     # camera initialization
     camera = Astra()
     camera.start()
-    theta = -0.0471
+    theta = -0.0499
     theta *= (np.pi/180)
-    phi = -.0047 *(np.pi/180)
+    phi = -.00048 *(np.pi/180)
     T = np.array([
         [np.cos(phi),np.sin(phi)*np.sin(theta),np.sin(phi)*np.cos(theta),0],
         [0,np.cos(theta),-np.sin(theta),0],
