@@ -29,6 +29,7 @@ def invokeDexNet(color, depth, segmask):
     """
     color_im = ColorImage(color)
     depth_im = DepthImage(depth).inpaint(1)
+    cv.imshow('inpaint',depth_im._image_data())
     rgbd_im = RgbdImage.from_color_and_depth(color_im, depth_im)
     camera_intr = CameraIntrinsics.load(os.path.join(os.path.dirname(os.path.realpath(__file__)), "Astra/Astra_IR.intr"))
     state = RgbdImageState(rgbd_im, camera_intr, segmask=segmask)
@@ -86,7 +87,17 @@ def draw_grasp(action, im,depth_at_x_y=None):
     im_rec = cv.putText(im_rec, text, text_position, font, font_scale, (255, 255, 255), font_thickness)
     
     return im_rec
+def write_to_output(name,action,outfile):
 
+    foo = action.grasp.feature_vec
+    p1 = (int(foo[0]), int(foo[1]))
+    p2 = (int(foo[2]), int(foo[3]))
+    depth = foo[4]
+    centroidX=action.grasp.center.vector[0]
+    centroidY=action.grasp.center.vector[1]
+    outdict={"Name":name,"X_0":centroidX,"Y_0":centroidY,"X_1":p1[0],"Y_1":p1[1],"X_2":p2[0],"Y_2":p2[1],"Dep":depth}
+    outfile.write(str(outdict)+"\n")
+    
 def calibrate(color,depth,detector):
     color_copy = color.copy()
     contours,full_bin_im,*_ = detector.detect_objects(color,depth)
@@ -95,10 +106,14 @@ def calibrate(color,depth,detector):
     except ValueError:
         return None
     for cube_name,cube in detector.cubes.items():
-            cube_seg_mask = full_bin_im.contour_mask(cube.get_property('contour'))
-            action = invokeDexNet(color,depth,cube_seg_mask)
-            cube.update_properties(action=action)
-            color_copy = draw_grasp(action,color_copy)
+            try:
+                cube_seg_mask = full_bin_im.contour_mask(cube.get_property('contour'))
+                action = invokeDexNet(color,depth,cube_seg_mask)
+                cube.update_properties(action=action)
+                color_copy = draw_grasp(action,color_copy)
+            except KeyError as e:
+                cube.tolerance +=2 
+                raise e
     return color_copy
 
 
@@ -113,14 +128,16 @@ if __name__ == "__main__":
 
     # Set up object detector
     detector = detector.Detector("Detection/example_config.json")
-    theta = -.0471 * (np.pi/180)
-    phi = -.0047 *(np.pi/180)
+    theta = -.0499 * (np.pi/180)
+    phi = -.00048 *(np.pi/180)
 
 
     R = np.array([[np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta)*np.sin(phi),0],
                  [0,np.cos(theta),-np.sin(theta),0],
                  [-np.sin(phi),np.sin(theta)*np.cos(phi),np.cos(theta)*np.cos(phi),0],
                  [0,0,0,1]])
+
+    #Find all calibration cubes and plan their grasps:
     retries = 0
     cal_grasps = None
     while retries < 100 and cal_grasps is None:
@@ -136,6 +153,10 @@ if __name__ == "__main__":
 
     cal_grasps = calibrate(color,depth,detector)
     cv.imshow('calibration_grasps',cal_grasps)
+    
+    with open ("../../franky/franky/items/Calibration.txt","w") as outfile:
+        for cube_name,cube in detector.cubes.items():
+            write_to_output(cube_name,cube.get_property('action'),outfile)
 
     # Main event loop
     while 1:
@@ -159,6 +180,7 @@ if __name__ == "__main__":
                 print("No object found")
             else:
                 single_obj_bin_im = full_binary_image.contour_mask(containing_contour)
+                cv.imshow('click',single_obj_bin_im._image_data())
                 action = invokeDexNet(color, depth, single_obj_bin_im)
                 if policy_config["vis"]["final_grasp"]:
                     im = draw_grasp(action,color)#,depth_at_x_y)
