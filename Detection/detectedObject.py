@@ -65,8 +65,10 @@ class DetectedObject:
         """
         if self.color is None:
             raise ValueError(f"{self.name} has no color set for comparison.")
-        return all(abs(c1 - c2) <= self.tolerance for c1, c2 in zip(self.color, color))
-    
+        foo =list(abs(c1 - c2) <= self.tolerance for c1, c2 in zip(self.color, color))
+        #print(self.name,list(foo))
+        return foo[0] and foo[1] and foo[2]
+
     def __lt__(self,other):
         """
         Compare this DetectedObject to another based on the x coordinates of the contour's center

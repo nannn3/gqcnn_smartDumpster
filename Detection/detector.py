@@ -19,12 +19,12 @@ class Detector:
         """
         self.load_cfg(config_file)
         self.cubes = { # Expected calibration cubes and their average colors:
-                'Tall_Green':{'color':(65,100,165)},
-                'Short_Blue':{'color':(20,195,80)},
+                'Tall_Green':{'color':(70,100,175)},
+                'Short_Blue':{'color':(20,170,75)},
                 'Tall_Orange':{'color':(100,140,235)},
                 'Short_White':{'color':(5,5,225)},
-                'Short_Green':{'color':(55,55,225)},
-                'Tall_Blue':{'color':(10,160,145)},
+                'Short_Green':{'color':(70,100,210)},
+                'Tall_Blue':{'color':(15,155,140)},
                 'Short_Orange':{'color':(100,115,245)},
                 'Tall_White':{'color':(5,5,245)}
                 }
@@ -32,6 +32,7 @@ class Detector:
 
         for name,prop in self.cubes.items():
             # Update to DetectedObject class
+            #print(name,prop)
             cube = detectedObject.DetectedObject(name,color = prop['color'])
             self.cubes[name] = cube
 
@@ -39,7 +40,7 @@ class Detector:
         color_image = color_image.copy()
         for name,detected in self.cubes.items():
             try:
-                contour = detected.get_property('top_contour')
+                contour = detected.get_property('contour')
                 box = contour.bounding_box
                 y,x = box.center
                 x = int(x)
@@ -63,7 +64,9 @@ class Detector:
         Returns:
             str: Name of the cube if a match is found, otherwise None.
         """
+        #print('\n\n In compare_color_to_cubes\n\n')
         for cube_name, cube in self.cubes.items():
+            #print(cube_name,cube.color)
             if cube.is_same_color(color):
                 return cube_name
         return None
@@ -111,16 +114,17 @@ class Detector:
                 self.cubes['Tall_White'].update_properties(**sorted_white_cubes[1][1])
             except IndexError:
                 pass
-
+        '''
         for cube_name, cube in self.cubes.items():
             try:
                 contour = cube.get_property('contour')
             except KeyError as e:
                 continue
-            top_mask = self.find_object_tops(depth,[contour],threshold = .022)[0]
+            top_mask = self.find_object_tops(depth,[contour],threshold = .01)[0]
                
             top_contour = top_mask.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))[0]
             cube.update_properties(top_contour=top_contour)
+        '''
     def get_color_from_contour(self, color_image, contour):
         """
         Extracts the mean color from the specified contour area in the given color image.
@@ -406,9 +410,9 @@ if __name__ == "__main__":
     # camera initialization
     camera = Astra()
     camera.start()
-    theta = -0.0499
+    theta = -0.0519
     theta *= (np.pi/180)
-    phi = -.00048 *(np.pi/180)
+    phi = .0013*(np.pi/180)
     T = np.array([
         [np.cos(phi),np.sin(phi)*np.sin(theta),np.sin(phi)*np.cos(theta),0],
         [0,np.cos(theta),-np.sin(theta),0],
@@ -428,6 +432,8 @@ if __name__ == "__main__":
     while True:
         color, depth = camera.frames()
         depth = camera.transform_image(depth,T)
+        depth_color = camera.depth_to_color(depth)
+        cv.imshow('depth_raw',depth_color)
         depth_im = DepthImage(depth)
         contours,tops,color_mask,depth_mask = detector.detect_objects(color, depth)
         cv.imshow('color_mask',color_mask._image_data())

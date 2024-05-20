@@ -28,7 +28,7 @@ def invokeDexNet(color, depth, segmask):
         action: Grasping action.
     """
     color_im = ColorImage(color)
-    depth_im = DepthImage(depth).inpaint(1)
+    depth_im = DepthImage(depth).inpaint()
     cv.imshow('inpaint',depth_im._image_data())
     rgbd_im = RgbdImage.from_color_and_depth(color_im, depth_im)
     camera_intr = CameraIntrinsics.load(os.path.join(os.path.dirname(os.path.realpath(__file__)), "Astra/Astra_IR.intr"))
@@ -55,15 +55,14 @@ def draw_grasp(action, im,depth_at_x_y=None):
         depth = depth_at_x_y
     else:
         depth = foo[4]
-    
+    '''
     # Write to output file
     centroidX=action.grasp.center.vector[0]
     centroidY=action.grasp.center.vector[1]
-    outfile = open("../../franky/franky/items/Items_Rot_Dep.txt","a")
     outdict={"X_0":centroidX,"Y_0":centroidY,"X_1":p1[0],"Y_1":p1[1],"X_2":p2[0],"Y_2":p2[1],"Dep":depth}
     outfile.write(str(outdict)+"\n")
     
-    
+    '''
     # This copy makes it work.
     im = im.copy() # https://stackoverflow.com/questions/23830618/python-opencv-typeerror-layout-of-the-output-array-incompatible-with-cvmat
     
@@ -87,12 +86,13 @@ def draw_grasp(action, im,depth_at_x_y=None):
     im_rec = cv.putText(im_rec, text, text_position, font, font_scale, (255, 255, 255), font_thickness)
     
     return im_rec
-def write_to_output(name,action,outfile):
+def write_to_output(name,action,outfile,depth=None):
 
     foo = action.grasp.feature_vec
     p1 = (int(foo[0]), int(foo[1]))
     p2 = (int(foo[2]), int(foo[3]))
-    depth = foo[4]
+    if depth is None:
+        depth = foo[4]
     centroidX=action.grasp.center.vector[0]
     centroidY=action.grasp.center.vector[1]
     outdict={"Name":name,"X_0":centroidX,"Y_0":centroidY,"X_1":p1[0],"Y_1":p1[1],"X_2":p2[0],"Y_2":p2[1],"Dep":depth}
@@ -107,10 +107,10 @@ def calibrate(color,depth,detector):
         return None
     for cube_name,cube in detector.cubes.items():
             try:
-                cube_seg_mask = full_bin_im.contour_mask(cube.get_property('top_contour'))
+                cube_seg_mask = full_bin_im.contour_mask(cube.get_property('contour'))
                 action = invokeDexNet(color,depth,cube_seg_mask)
                 cube.update_properties(action=action)
-                color_copy = draw_grasp(action,color_copy)
+                color_copy = draw_grasp(action,color_copy,cube.get_property('height'))
             except KeyError as e:
                 cube.tolerance += 3 
                 print(f'{cube_name} tolerance is now {cube.tolerance}')
@@ -129,8 +129,8 @@ if __name__ == "__main__":
 
     # Set up object detector
     detector = detector.Detector("Detection/example_config.json")
-    theta = -.0499 * (np.pi/180)
-    phi = -.00040 *(np.pi/180)
+    theta = -.0519 * (np.pi/180)
+    phi = .0013 *(np.pi/180)
 
 
     R = np.array([[np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta)*np.sin(phi),0],
@@ -153,12 +153,12 @@ if __name__ == "__main__":
     if retries == MAX_RETRIES:
         raise Exception("Couldn't find cubes")
 
-    cal_grasps = calibrate(color,depth,detector)
+    #cal_grasps = calibrate(color,depth,detector)
     cv.imshow('calibration_grasps',cal_grasps)
     
     with open ("../../franky/franky/items/Calibration.txt","w") as outfile:
         for cube_name,cube in detector.cubes.items():
-            write_to_output(cube_name,cube.get_property('action'),outfile)
+            write_to_output(cube_name,cube.get_property('action'),outfile,depth=cube.get_property('height'))
 
     # Main event loop
     while 1:
@@ -185,8 +185,10 @@ if __name__ == "__main__":
                 cv.imshow('click',single_obj_bin_im._image_data())
                 action = invokeDexNet(color, depth, single_obj_bin_im)
                 if policy_config["vis"]["final_grasp"]:
-                    im = draw_grasp(action,color)#,depth_at_x_y)
-
+                    im = draw_grasp(action,color,depth_at_x_y)
+                    
+                    with open("../../franky/franky/items/Items_Rot_Dep.txt","a") as outfile:
+                        write_to_output('Grasp',action,outfile,depth_at_x_y)
                     cv.imshow("Planned grasp",im)
             
 
