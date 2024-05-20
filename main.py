@@ -107,12 +107,13 @@ def calibrate(color,depth,detector):
         return None
     for cube_name,cube in detector.cubes.items():
             try:
-                cube_seg_mask = full_bin_im.contour_mask(cube.get_property('contour'))
+                cube_seg_mask = full_bin_im.contour_mask(cube.get_property('top_contour'))
                 action = invokeDexNet(color,depth,cube_seg_mask)
                 cube.update_properties(action=action)
                 color_copy = draw_grasp(action,color_copy)
             except KeyError as e:
-                cube.tolerance +=2 
+                cube.tolerance += 3 
+                print(f'{cube_name} tolerance is now {cube.tolerance}')
                 raise e
     return color_copy
 
@@ -129,7 +130,7 @@ if __name__ == "__main__":
     # Set up object detector
     detector = detector.Detector("Detection/example_config.json")
     theta = -.0499 * (np.pi/180)
-    phi = -.00048 *(np.pi/180)
+    phi = -.00040 *(np.pi/180)
 
 
     R = np.array([[np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta)*np.sin(phi),0],
@@ -140,15 +141,16 @@ if __name__ == "__main__":
     #Find all calibration cubes and plan their grasps:
     retries = 0
     cal_grasps = None
-    while retries < 100 and cal_grasps is None:
+    MAX_RETRIES = 300
+    while retries < MAX_RETRIES and cal_grasps is None:
         try:
             color, depth = camera.frames()
             depth = camera.transform_image(depth,R)
             cal_grasps = calibrate(color,depth,detector)
         except KeyError as e:
             print(f'{e}, retrying')
-            retries += 1
-    if retries == 100:
+            retries +=1 
+    if retries == MAX_RETRIES:
         raise Exception("Couldn't find cubes")
 
     cal_grasps = calibrate(color,depth,detector)

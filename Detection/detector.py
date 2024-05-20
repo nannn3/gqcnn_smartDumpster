@@ -19,12 +19,12 @@ class Detector:
         """
         self.load_cfg(config_file)
         self.cubes = { # Expected calibration cubes and their average colors:
-                'Tall_Green':{'color':(55,85,165)},
+                'Tall_Green':{'color':(65,100,165)},
                 'Short_Blue':{'color':(20,195,80)},
-                'Tall_Orange':{'color':(100,120,235)},
+                'Tall_Orange':{'color':(100,140,235)},
                 'Short_White':{'color':(5,5,225)},
                 'Short_Green':{'color':(55,55,225)},
-                'Tall_Blue':{'color':(10,190,145)},
+                'Tall_Blue':{'color':(10,160,145)},
                 'Short_Orange':{'color':(100,115,245)},
                 'Tall_White':{'color':(5,5,245)}
                 }
@@ -39,7 +39,7 @@ class Detector:
         color_image = color_image.copy()
         for name,detected in self.cubes.items():
             try:
-                contour = detected.get_property('contour')
+                contour = detected.get_property('top_contour')
                 box = contour.bounding_box
                 y,x = box.center
                 x = int(x)
@@ -112,7 +112,15 @@ class Detector:
             except IndexError:
                 pass
 
-
+        for cube_name, cube in self.cubes.items():
+            try:
+                contour = cube.get_property('contour')
+            except KeyError as e:
+                continue
+            top_mask = self.find_object_tops(depth,[contour],threshold = .022)[0]
+               
+            top_contour = top_mask.find_contours(min_area=self.get_cfg('min_contour_area'), max_area=self.get_cfg('max_contour_area'))[0]
+            cube.update_properties(top_contour=top_contour)
     def get_color_from_contour(self, color_image, contour):
         """
         Extracts the mean color from the specified contour area in the given color image.
@@ -242,7 +250,7 @@ class Detector:
             # Combine the current mask with the final binary image
             final_bin_im = cv.bitwise_or(final_bin_im, close_to_min.astype(np.uint8))
         
-        return final_bin_im,min_depth
+        return BinaryImage(final_bin_im),min_depth
 
     def create_foreground_mask(self,color_im):
         """
