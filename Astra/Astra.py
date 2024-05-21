@@ -42,6 +42,90 @@ class Astra():
         """Ensures that the camera streams are stopped when the instance is destroyed."""
         if self.is_running:
             self.stop()
+    
+	def compute_best_rotation_matrix(self, depth, points):
+        """
+        Computes the best rotation matrix based on the given depth image and a list of points.
+        The function iteratively refines the range and step size to find the optimal theta and phi.
+
+        Args:
+            depth (numpy.ndarray): The depth image array to transform.
+            points (list of tuples): A list of (row, col) tuples representing points in the depth image.
+
+        Returns:
+            numpy.ndarray: The best 4x4 rotation matrix.
+        """
+        def adjust_range_and_step(value, range_min, range_max, step_size):
+            """
+            Adjusts the range and step size based on the current best value.
+
+            Args:
+                value (float): The current best value.
+                range_min (float): The minimum value of the range.
+                range_max (float): The maximum value of the range.
+                step_size (float): The current step size.
+
+            Returns:
+                tuple: A tuple containing the new range_min, range_max, and step_size.
+            """
+            if (value - range_min < step_size) or (range_max - value < step_size):
+                # Near the bounds, shif the step size
+                step_size /= 10
+
+            range_min = value - 5 * step_size
+            range_max = value + 5 * step_size
+            return range_min, range_max, step_size
+
+        min_dif = np.inf
+        best_theta = 0
+        best_phi = 0
+
+        theta_min, theta_max, theta_step = -1, 0, 0.1
+        phi_min, phi_max, phi_step = -1, 0, 0.1
+
+        while theta_step > 1e-4 or phi_step > 1e-4:
+            for theta_deg in np.arange(theta_min, theta_max, theta_step):
+                theta = theta_deg * (np.pi / 180)
+                for phi_deg in np.arange(phi_min, phi_max, phi_step):
+                    phi = phi_deg * (np.pi / 180)
+
+                    T = np.array([
+                        [np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta) * np.sin(phi), 0],
+                        [0, np.cos(theta), -np.sin(theta), 0],
+                        [-np.sin(phi), np.sin(theta) * np.cos(phi), np.cos(theta) * np.cos(phi), 0],
+                        [0, 0, 0, 1]
+                    ])
+
+                    transformed_depth = self.transform_image(depth, T)
+                    vals = [transformed_depth[row, col] for row, col in points]
+
+                    if 0 in vals:
+                        continue
+
+                    dif = average_dif(vals)
+
+                    if dif < min_dif:
+                        best_theta = theta_deg
+                        best_phi = phi_deg
+                        min_dif = dif
+
+            theta_min, theta_max, theta_step = adjust_range_and_step(best_theta, theta_min, theta_max, theta_step)
+            phi_min, phi_max, phi_step = adjust_range_and_step(best_phi, phi_min, phi_max, phi_step)
+
+            # Check stopping condition
+            if min_dif < 0.001:
+                break
+
+        theta = best_theta * (np.pi / 180)
+        phi = best_phi * (np.pi / 180)
+
+        R = np.array([
+            [np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta) * np.sin(phi), 0],
+            [0, np.cos(theta), -np.sin(theta), 0],
+            [-np.sin(phi), np.sin(theta) * np.cos(phi), np.cos(theta) * np.cos(phi), 0],
+            [0, 0, 0, 1]
+        ])
+        return R
 
     @staticmethod
     def load_intrinsics(path):
