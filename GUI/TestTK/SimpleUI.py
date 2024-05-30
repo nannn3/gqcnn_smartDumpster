@@ -28,8 +28,13 @@ class SimpleUI:
         self.image_label.grid(row=0, column=0, rowspan=3)
         self.image_label.bind("<Button-1>", self.on_image_click)
 
+        # Create button styles:
+        style = ttk.Style()
+        style.theme_use('default')
+        style.configure("Pickup.TButton", background="green", foreground="white", relief="flat")
+        style.map("Pickup.TButton", background=[('active', 'green'), ('pressed', 'dark green')])
         # Create buttons
-        self.pickup_button = ttk.Button(self.frame, text="Pickup", command=self.on_pickup)
+        self.pickup_button = ttk.Button(self.frame, text="Pickup", command=self.on_pickup, style="Pickup.TButton")
         self.pickup_button.grid(row=0, column=1, padx=5, pady=5)
 
         self.start_button = ttk.Button(self.frame, text="Start", command=self.on_start)
@@ -52,21 +57,20 @@ class SimpleUI:
             event (tk.Event): The event object containing click coordinates.
         """
         self.clicks.append((event.x, event.y))
-        print(f"Image clicked at: {event.x}, {event.y}")
 
     def on_pickup(self):
-        """Handles Pickup button click."""
-        print("Pickup button clicked")
+        """
+        Handles Pickup button click.
+        Returns (str) The name of the button pressed
+        """
         return "Pickup"
 
     def on_start(self):
         """Handles Start button click."""
-        print("Start button clicked")
         return "Start"
 
     def on_calibrate(self):
         """Handles Calibrate button click."""
-        print("Calibrate button clicked")
         return "Calibrate"
 
     def on_key_press(self, event):
